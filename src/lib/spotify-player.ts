@@ -109,11 +109,12 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const query = GENRE_QUERIES[genre];
   if (!query) throw new Error(`Género no configurado: ${genre}`);
 
-  const offsets = [0, 50, 100, 150, 200, 250];
+  // limit param causes 400 on this app — use default (20/page) with offsets
+  const offsets = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180];
   const pages = await Promise.all(
     offsets.map(offset =>
       fetch(
-        `https://api.spotify.com/v1/search?${new URLSearchParams({ q: query, type: 'track', limit: '50', offset: String(offset) })}`,
+        `https://api.spotify.com/v1/search?${new URLSearchParams({ q: query, type: 'track', offset: String(offset) })}`,
         { headers: { Authorization: `Bearer ${token}` } },
       )
         .then(r => r.ok ? r.json() : { tracks: { items: [] } })
