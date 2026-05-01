@@ -680,19 +680,18 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const songs = GENRE_SONGS[genre];
   if (!songs) throw new Error(`Género no configurado: ${genre}`);
 
-  // Pick 8 random songs — extra margin in case some fail to resolve
-  const picked = shuffleArray([...songs]).slice(0, 8);
+  // Pick 5 random songs, resolve sequentially to avoid Spotify dev-mode rate limits
+  const picked = shuffleArray([...songs]).slice(0, 5);
 
-  const results = await Promise.all(picked.map(s => findTrack(s, token)));
-
-  const tracks = results
-    .map(r => r.result)
-    .filter((t): t is TrackInfo => t !== null);
-
-  if (tracks.length === 0) {
-    const errs = results.map((r, i) => `${picked[i].name}: ${r.error}`).join(' | ');
-    throw new Error(`No resultados (${genre}). ${errs}`);
+  const tracks: TrackInfo[] = [];
+  const errs: string[] = [];
+  for (const song of picked) {
+    const { result, error } = await findTrack(song, token);
+    if (result) tracks.push(result);
+    else errs.push(`${song.name}: ${error}`);
   }
+
+  if (tracks.length === 0) throw new Error(`No resultados (${genre}). ${errs.join(' | ')}`);
   return tracks;
 }
 
