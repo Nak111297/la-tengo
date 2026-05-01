@@ -20,6 +20,7 @@ export function useGame() {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const tracksRef = useRef<TrackInfo[]>([]);
   const trackIndexRef = useRef(0);
+  const playedUrisRef = useRef<Set<string>>(new Set());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -43,12 +44,16 @@ export function useGame() {
     try {
       const tracks = await loadTracksForGenre(genre);
       if (tracks.length === 0) return 'No se encontraron canciones para ese género.';
-      tracksRef.current = tracks;
+
+      const fresh = tracks.filter(t => !playedUrisRef.current.has(t.uri));
+      const pool = fresh.length > 0 ? fresh : tracks; // reset if all already played
+      tracksRef.current = pool;
       trackIndexRef.current = 0;
+
       update({
         phase: 'bet-time',
-        currentTrack: tracks[0],
-        currentTrackUri: tracks[0].uri,
+        currentTrack: pool[0],
+        currentTrackUri: pool[0].uri,
       });
       return null;
     } catch (e) {
@@ -68,6 +73,7 @@ export function useGame() {
     const track = tracksRef.current[trackIndexRef.current];
     if (!track) return;
 
+    playedUrisRef.current.add(track.uri);
     update({ betSeconds: seconds, phase: 'playing' });
     await playSong(track.uri);
 
@@ -187,6 +193,7 @@ export function useGame() {
 
   const resetGame = useCallback(() => {
     clearTimers();
+    playedUrisRef.current.clear();
     setState(INITIAL_STATE);
   }, [clearTimers]);
 
