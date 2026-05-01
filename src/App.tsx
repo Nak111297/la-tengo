@@ -16,6 +16,7 @@ export default function App() {
   const [authed, setAuthed] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [genreError, setGenreError] = useState<string | null>(null);
 
   const {
     state, timeLeft,
@@ -36,8 +37,10 @@ export default function App() {
 
   const handleGenreSelect = useCallback(async (genre: string) => {
     setLoading(true);
-    await selectGenre(genre);
+    setGenreError(null);
+    const error = await selectGenre(genre);
     setLoading(false);
+    if (error) setGenreError(error);
   }, [selectGenre]);
 
   if (!authed) return <Login />;
@@ -81,7 +84,14 @@ export default function App() {
         )}
 
         {state.phase === 'genre-select' && currentTeam && (
-          <GenreSelect currentTeam={currentTeam} onSelect={handleGenreSelect} loading={loading} />
+          <>
+            <GenreSelect currentTeam={currentTeam} onSelect={handleGenreSelect} loading={loading} />
+            {genreError && (
+              <div className="fixed bottom-6 left-4 right-4 rounded-xl bg-red-900/80 p-4 text-center text-sm text-red-200">
+                {genreError}
+              </div>
+            )}
+          </>
         )}
 
         {state.phase === 'bet-time' && currentTeam && (

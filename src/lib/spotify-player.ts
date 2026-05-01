@@ -69,7 +69,7 @@ const GENRE_PLAYLIST_QUERIES: Record<string, string> = {
 
 export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const token = await getToken();
-  if (!token) return [];
+  if (!token) throw new Error('No Spotify token');
 
   const query = GENRE_PLAYLIST_QUERIES[genre] || genre;
   const res = await fetch(
@@ -77,7 +77,10 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
     { headers: { Authorization: `Bearer ${token}` } },
   );
 
-  if (!res.ok) return [];
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Spotify search failed: ${res.status} ${JSON.stringify(err)}`);
+  }
   const data = await res.json();
 
   const playlists = data.playlists?.items || [];

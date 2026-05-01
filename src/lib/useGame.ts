@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { GameState, Team, TrackInfo } from '../types';
 import { TEAM_COLORS } from '../types';
 import { calculateScore } from './scoring';
@@ -39,16 +39,21 @@ export function useGame() {
     update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1 });
   }, [update]);
 
-  const selectGenre = useCallback(async (genre: string) => {
-    const tracks = await loadTracksForGenre(genre);
-    if (tracks.length === 0) return;
-    tracksRef.current = tracks;
-    trackIndexRef.current = 0;
-    update({
-      phase: 'bet-time',
-      currentTrack: tracks[0],
-      currentTrackUri: tracks[0].uri,
-    });
+  const selectGenre = useCallback(async (genre: string): Promise<string | null> => {
+    try {
+      const tracks = await loadTracksForGenre(genre);
+      if (tracks.length === 0) return 'No se encontraron canciones para ese género.';
+      tracksRef.current = tracks;
+      trackIndexRef.current = 0;
+      update({
+        phase: 'bet-time',
+        currentTrack: tracks[0],
+        currentTrackUri: tracks[0].uri,
+      });
+      return null;
+    } catch (e) {
+      return 'Error cargando canciones. Intenta de nuevo.';
+    }
   }, [update]);
 
   const clearTimers = useCallback(() => {
