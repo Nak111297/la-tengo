@@ -6,8 +6,17 @@ let deviceId: string | null = null;
 let playerReady = false;
 let onReadyCallback: (() => void) | null = null;
 
+export function isMobile(): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 export function initPlayer(onReady: () => void): void {
   onReadyCallback = onReady;
+
+  if (isMobile()) {
+    connectMobileDevice();
+    return;
+  }
 
   if (document.getElementById('spotify-sdk')) {
     if (playerReady) onReady();
@@ -22,6 +31,31 @@ export function initPlayer(onReady: () => void): void {
   (window as unknown as Record<string, unknown>).onSpotifyWebPlaybackSDKReady = () => {
     createPlayer();
   };
+}
+
+async function connectMobileDevice(): Promise<void> {
+  const token = await getToken();
+  if (!token) return;
+
+  const res = await fetch('https://api.spotify.com/v1/me/player/devices', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return;
+
+  const data = await res.json();
+  const devices: { id: string; is_active: boolean }[] = data.devices ?? [];
+  const active = devices.find(d => d.is_active) ?? devices[0];
+
+  if (active?.id) {
+    deviceId = active.id;
+    playerReady = true;
+    onReadyCallback?.();
+  }
+}
+
+export async function retryMobileConnect(): Promise<boolean> {
+  await connectMobileDevice();
+  return playerReady;
 }
 
 async function createPlayer(): Promise<void> {
