@@ -49,6 +49,7 @@ export const BET_OPTIONS = [
 export const STEAL_POINTS = 1;
 
 export const GENRES = [
+  'EDM',
   'Pop Latino',
   'Reggaetón',
   'Rock en Español',

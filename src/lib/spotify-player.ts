@@ -56,6 +56,7 @@ export function isPlayerReady(): boolean {
 
 // Fixed Spotify editorial playlist IDs per genre — swap any ID to change the playlist
 const GENRE_PLAYLISTS: Record<string, string> = {
+  'EDM':               '3vdYDhTPS1399eLUzsrPJE', // EDM test playlist
   'Pop Latino':        '37i9dQZF1DX10zKzsJ2jva', // ¡Viva Latino!
   'Reggaetón':         '37i9dQZF1DXa2PvUpywmrr', // Baila Reggaeton
   'Rock en Español':   '37i9dQZF1DXe2bobNYDtW8', // Rock en Español
