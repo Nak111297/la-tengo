@@ -30,17 +30,17 @@ export function isPlayerReady(): boolean {
 }
 
 const GENRE_QUERIES: Record<string, string> = {
-  'EDM':               'genre:edm',
-  'Pop Latino':        'genre:latin pop',
-  'Reggaetón':         'genre:reggaeton',
-  'Rock en Español':   'genre:spanish rock',
-  'Pop Internacional': 'genre:pop',
-  '2000s Hits':        'genre:pop year:2000-2009',
-  'Fiesta / Party':    'genre:latin',
-  'Hip Hop':           'genre:hip-hop',
-  'R&B':               'genre:r-n-b',
-  '80s Hits':          'genre:pop year:1980-1989',
-  '90s Hits':          'genre:pop year:1990-1999',
+  'EDM':               'edm electronic dance',
+  'Pop Latino':        'pop latino',
+  'Reggaetón':         'reggaeton',
+  'Rock en Español':   'rock en espanol',
+  'Pop Internacional': 'pop hits',
+  '2000s Hits':        'pop 2000s',
+  'Fiesta / Party':    'fiesta party',
+  'Hip Hop':           'hip hop',
+  'R&B':               'rnb soul',
+  '80s Hits':          '80s hits',
+  '90s Hits':          '90s hits',
 };
 
 export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
