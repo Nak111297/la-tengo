@@ -6,10 +6,11 @@ interface Props {
   timeLeft: number;
   stealMode: boolean;
   stealTeam: Team | null;
+  onBuzzIn: () => void;
   onSkip: () => void;
 }
 
-export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, stealTeam, onSkip }: Props) {
+export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, stealTeam, onBuzzIn, onSkip }: Props) {
   const pct = Math.max(0, Math.min(100, (timeLeft / betSeconds) * 100));
 
   return (
@@ -51,6 +52,13 @@ export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, 
           <span className="animate-pulse text-sm text-zinc-400">🎵 Reproduciendo...</span>
         </div>
       </div>
+
+      <button
+        onClick={onBuzzIn}
+        className="rounded-2xl bg-purple-600 px-12 py-5 text-2xl font-black text-white shadow-lg active:scale-95 transition-transform"
+      >
+        ¡La Tengo!
+      </button>
 
       <button
         onClick={onSkip}

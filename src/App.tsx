@@ -21,7 +21,7 @@ export default function App() {
   const {
     state, timeLeft,
     startGame, selectGenre, betAndPlay,
-    playerGotIt, markCorrect, playerDidNotGetIt,
+    buzzIn, playerGotIt, markCorrect, playerDidNotGetIt,
     confirmCorrect, nextRound, skipSong, resetGame,
   } = useGame();
 
@@ -140,6 +140,7 @@ export default function App() {
             timeLeft={timeLeft}
             stealMode={state.stealMode}
             stealTeam={stealTeam}
+            onBuzzIn={buzzIn}
             onSkip={skipSong}
           />
         )}

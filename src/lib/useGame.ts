@@ -98,6 +98,12 @@ export function useGame() {
     }, seconds * 1000);
   }, [update, clearTimers]);
 
+  const buzzIn = useCallback(async () => {
+    await pauseSong();
+    clearTimers();
+    update({ phase: 'guess-prompt' });
+  }, [clearTimers, update]);
+
   const playerGotIt = useCallback(() => {
     update({ phase: 'reveal' });
   }, [update]);
@@ -204,6 +210,7 @@ export function useGame() {
     startGame,
     selectGenre,
     betAndPlay,
+    buzzIn,
     playerGotIt,
     markCorrect,
     playerDidNotGetIt,
