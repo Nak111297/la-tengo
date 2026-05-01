@@ -129,13 +129,8 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const allArtists = GENRE_ARTISTS[genre];
   if (!allArtists) throw new Error(`Género no configurado: ${genre}`);
 
-  // Pick one random artist and search — single request, no rate limiting
-  const artist = allArtists[Math.floor(Math.random() * allArtists.length)];
-
-  const res = await fetch(
-    `https://api.spotify.com/v1/search?${new URLSearchParams({ q: artist, type: 'track' })}`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
+  // Pick 3 different random artists — 3 parallel requests is safe from rate limiting
+  const picked = shuffleArray(allArtists).slice(0, 3);
 
   type RawTrack = {
     uri: string; name: string; popularity: number;
@@ -143,21 +138,40 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
     album: { name: string; images: { url: string }[]; release_date: string };
   };
 
-  const data = res.ok ? await res.json() : { tracks: { items: [] } };
-  const items: RawTrack[] = data.tracks?.items ?? [];
+  const pages = await Promise.all(
+    picked.map(artist =>
+      fetch(
+        `https://api.spotify.com/v1/search?${new URLSearchParams({ q: artist, type: 'track' })}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+        .then(r => r.ok ? r.json() : { tracks: { items: [] } })
+        .catch(() => ({ tracks: { items: [] } })),
+    ),
+  );
 
-  if (items.length === 0) throw new Error(`Sin resultados para: ${genre} (${artist})`);
+  const seen = new Set<string>();
+  const all: (TrackInfo & { popularity: number })[] = [];
+  for (const page of pages) {
+    for (const t of (page.tracks?.items ?? []) as (RawTrack | null)[]) {
+      if (t?.uri && !seen.has(t.uri)) {
+        seen.add(t.uri);
+        all.push({
+          uri: t.uri,
+          name: t.name,
+          artist: t.artists.map(a => a.name).join(', '),
+          album: t.album.name,
+          albumArt: t.album.images[0]?.url || '',
+          year: parseInt(t.album.release_date?.substring(0, 4) || '0', 10),
+          popularity: t.popularity ?? 0,
+        });
+      }
+    }
+  }
 
-  const tracks = items.map(t => ({
-    uri: t.uri,
-    name: t.name,
-    artist: t.artists.map(a => a.name).join(', '),
-    album: t.album.name,
-    albumArt: t.album.images[0]?.url || '',
-    year: parseInt(t.album.release_date?.substring(0, 4) || '0', 10),
-  }));
+  if (all.length === 0) throw new Error(`Sin resultados para: ${genre}`);
 
-  return shuffleArray(tracks);
+  const top = all.sort((a, b) => b.popularity - a.popularity).slice(0, 30);
+  return shuffleArray(top.map(({ popularity: _p, ...track }) => track));
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
