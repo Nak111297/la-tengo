@@ -51,11 +51,18 @@ async function connectMobileDevice(): Promise<void> {
     devices.find(d => d.name !== 'La Tengo') ??
     devices[0];
 
-  if (picked?.id) {
-    deviceId = picked.id;
-    playerReady = true;
-    onReadyCallback?.();
-  }
+  if (!picked?.id) return;
+
+  // Transfer playback to this device so subsequent play commands land on it
+  await fetch('https://api.spotify.com/v1/me/player', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_ids: [picked.id], play: false }),
+  }).catch(() => {});
+
+  deviceId = picked.id;
+  playerReady = true;
+  onReadyCallback?.();
 }
 
 export async function retryMobileConnect(): Promise<boolean> {
@@ -128,7 +135,7 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   );
 
   type RawTrack = {
-    uri: string; name: string;
+    uri: string; name: string; popularity: number;
     artists: { name: string }[];
     album: { name: string; images: { url: string }[]; release_date: string };
   };
@@ -137,7 +144,7 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const tracks: TrackInfo[] = [];
   for (const page of pages) {
     for (const t of (page.tracks?.items ?? []) as (RawTrack | null)[]) {
-      if (t?.uri && !seen.has(t.uri)) {
+      if (t?.uri && !seen.has(t.uri) && (t.popularity ?? 0) >= 50) {
         seen.add(t.uri);
         tracks.push({
           uri: t.uri,
