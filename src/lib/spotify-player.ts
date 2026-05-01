@@ -29,45 +29,122 @@ export function isPlayerReady(): boolean {
   return !!deviceId;
 }
 
-const GENRE_QUERIES: Record<string, string> = {
-  'EDM':               'edm electronic dance',
-  'Pop Latino':        'pop latino',
-  'Reggaetón':         'reggaeton',
-  'Rock en Español':   'rock en espanol',
-  'Pop Internacional': 'pop hits',
-  '2000s Hits':        'pop 2000s',
-  'Fiesta / Party':    'fiesta party',
-  'Hip Hop':           'hip hop',
-  'R&B':               'rnb soul',
-  '80s Hits':          '80s hits',
-  '90s Hits':          '90s hits',
+const GENRE_ARTISTS: Record<string, string[]> = {
+  'EDM': [
+    'Martin Garrix','Avicii','Calvin Harris','David Guetta','Marshmello','Zedd','Tiësto',
+    'Deadmau5','Skrillex','Diplo','Kygo','The Chainsmokers','Daft Punk','Swedish House Mafia',
+    'Hardwell','Afrojack','Armin van Buuren','Disclosure','Flume','Illenium','Alan Walker',
+    'Odesza','Alesso','Felix Jaehn','Robin Schulz','Gryffin','Galantis','Don Diablo',
+    'Nicky Romero','W&W','Dimitri Vegas','Lost Frequencies','Kungs','Topic','R3HAB',
+  ],
+  'Pop Latino': [
+    'Shakira','Enrique Iglesias','Luis Fonsi','Ricky Martin','Carlos Vives','Juanes',
+    'Marc Anthony','Jennifer Lopez','Gloria Estefan','Paulina Rubio','Thalía','Chayanne',
+    'Juan Luis Guerra','Alejandro Fernández','Ricardo Arjona','Franco De Vita','Alejandro Sanz',
+    'Pablo Alborán','Miguel Bosé','Diego Torres','Sin Bandera','Ha*Ash','Jesse & Joy','Reik',
+    'Camila','Natalia Lafourcade','Mon Laferte','Los Ángeles Azules','Maná','Banda MS',
+    'Christian Nodal','Calibre 50','La Arrolladora','Intocable','Los Tigres del Norte',
+  ],
+  'Reggaetón': [
+    'Bad Bunny','J Balvin','Daddy Yankee','Maluma','Ozuna','Karol G','Nicky Jam',
+    'Anuel AA','Farruko','Wisin','Yandel','Don Omar','Zion & Lennox','Arcángel',
+    'De La Ghetto','Myke Towers','Jhay Cortez','Lunay','Sech','Rauw Alejandro',
+    'Justin Quiles','El Alfa','Eladio Carrión','Gente de Zona','Alexis & Fido',
+    'Plan B','Bryant Myers','Mora','Jhoni the Voice','Ñengo Flow',
+    'Lenny Tavárez','Dalex','Noriel','Nio Garcia','Casper Magico',
+  ],
+  'Rock en Español': [
+    'Maná','Soda Stereo','Juanes','Café Tacvba','Los Fabulosos Cadillacs','Molotov',
+    'La Oreja de Van Gogh','Gustavo Cerati','Jarabe de Palo','Hombres G',
+    'Los Enanitos Verdes','Divididos','Caifanes','Los Bunkers','Aterciopelados',
+    'Bacilos','Fito Páez','Charly García','Andrés Calamaro','Bersuit Vergarabat',
+    'La Renga','Héroe de Leyenda','Enrique Bunbury','Miranda!','Los Auténticos Decadentes',
+    'El Tri','Patricio Rey','Heroes del Silencio','Los Rodríguez','Serú Girán',
+    'Rata Blanca','Vilma Palma e Vampiros','Zoé','Kinky','Porter',
+  ],
+  'Pop Internacional': [
+    'Ariana Grande','Taylor Swift','Ed Sheeran','Bruno Mars','Dua Lipa','The Weeknd',
+    'Billie Eilish','Harry Styles','Adele','Beyoncé','Katy Perry','Lady Gaga',
+    'Selena Gomez','Justin Bieber','Miley Cyrus','Sam Smith','Lizzo','Olivia Rodrigo',
+    'SZA','Charlie Puth','Shawn Mendes','Camila Cabello','Halsey','Post Malone',
+    'Coldplay','Maroon 5','OneRepublic','Jason Mraz','Hozier','Lewis Capaldi',
+    'Doja Cat','Sabrina Carpenter','Chappell Roan','Gracie Abrams','Benson Boone',
+  ],
+  '2000s Hits': [
+    'Usher','Rihanna','Justin Timberlake','Nelly','Beyoncé','Shakira','Alicia Keys',
+    'Destiny\'s Child','Kelly Clarkson','Nelly Furtado','Fergie','Gwen Stefani',
+    'Amy Winehouse','Coldplay','The Black Eyed Peas','Linkin Park','Eminem','50 Cent',
+    'Kanye West','Jay-Z','Avril Lavigne','Pink','Maroon 5','Natasha Bedingfield',
+    'James Blunt','Nickelback','Fall Out Boy','Paramore','My Chemical Romance','OutKast',
+    'T.I.','Lil Jon','Ciara','Sean Paul','Ludacris',
+  ],
+  'Fiesta / Party': [
+    'Pitbull','Flo Rida','Black Eyed Peas','LMFAO','Daddy Yankee','Gloria Estefan',
+    'Marc Anthony','Celia Cruz','Shakira','Jennifer Lopez','Don Omar','Enrique Iglesias',
+    'Sean Paul','Rihanna','Bruno Mars','Dua Lipa','Daft Punk','Pharrell Williams',
+    'Robin Thicke','Nicki Minaj','DJ Snake','Major Lazer','Diplo','Bad Bunny',
+    'J Balvin','Maluma','Karol G','Becky G','Anitta','Ozuna',
+    'Clean Bandit','Disclosure','Mark Ronson','Lizzo','Cardi B',
+  ],
+  'Hip Hop': [
+    'Drake','Kendrick Lamar','Eminem','Jay-Z','Lil Wayne','Post Malone','Cardi B',
+    'Nicki Minaj','Travis Scott','J. Cole','21 Savage','Future','Migos','A$AP Rocky',
+    'Tyler the Creator','Childish Gambino','Chance the Rapper','Big Sean','Meek Mill',
+    'Lil Uzi Vert','Gunna','Young Thug','Lil Baby','DaBaby','Roddy Ricch',
+    'Polo G','Jack Harlow','Kid Cudi','Logic','Mac Miller',
+    'Wiz Khalifa','Snoop Dogg','Ice Cube','2Pac','Notorious B.I.G.',
+  ],
+  'R&B': [
+    'Beyoncé','Rihanna','Usher','Alicia Keys','John Legend','The Weeknd','Mary J. Blige',
+    'Ne-Yo','Chris Brown','Frank Ocean','Miguel','H.E.R.','Jhené Aiko','SZA',
+    'Normani','Tinashe','Ella Mai','Summer Walker','Brent Faiyaz','Daniel Caesar',
+    'Lucky Daye','Giveon','6LACK','Khalid','Kehlani','Jorja Smith',
+    'Victoria Monét','Ari Lennox','Teyana Taylor','Ciara','Trey Songz',
+    'Tank','Monica','Brandy','Maxwell','D\'Angelo',
+  ],
+  '80s Hits': [
+    'Michael Jackson','Madonna','Prince','Whitney Houston','Cyndi Lauper','George Michael',
+    'a-ha','Duran Duran','Bon Jovi','Bruce Springsteen','The Police','U2',
+    'Depeche Mode','New Order','The Cure','Tears for Fears','Wham!','Culture Club',
+    'Rick Springfield','Pat Benatar','Fleetwood Mac','Toto','Hall & Oates',
+    'Lionel Richie','Phil Collins','Peter Gabriel','Dire Straits','R.E.M.',
+    'Talking Heads','Simple Minds','The Bangles','Eurythmics','Billy Joel',
+    'Elton John','David Bowie',
+  ],
+  '90s Hits': [
+    'Backstreet Boys','Britney Spears','Spice Girls','Nirvana','Mariah Carey','TLC',
+    'No Doubt','Destiny\'s Child','Boyz II Men','Whitney Houston','Celine Dion',
+    'Alanis Morissette','Sheryl Crow','Ace of Base','Roxette','Savage Garden',
+    'Aqua','Brandy','Monica','N\'Sync','98 Degrees','Barenaked Ladies',
+    'Matchbox Twenty','Third Eye Blind','Counting Crows','Goo Goo Dolls',
+    'Smashing Pumpkins','Pearl Jam','Soundgarden','Green Day','Oasis',
+    'R. Kelly','Aaliyah','En Vogue','SWV','Toni Braxton',
+  ],
 };
 
 export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
 
-  const query = GENRE_QUERIES[genre];
-  if (!query) throw new Error(`Género no configurado: ${genre}`);
-
-  // limit param causes 400 — use default (20/page) with offsets
-  const offsets = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180];
-  const pages = await Promise.all(
-    offsets.map(offset =>
-      fetch(
-        `https://api.spotify.com/v1/search?${new URLSearchParams({ q: query, type: 'track', offset: String(offset) })}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-        .then(r => r.ok ? r.json() : { tracks: { items: [] } })
-        .catch(() => ({ tracks: { items: [] } })),
-    ),
-  );
+  const artists = GENRE_ARTISTS[genre];
+  if (!artists) throw new Error(`Género no configurado: ${genre}`);
 
   type RawTrack = {
     uri: string; name: string; popularity: number;
     artists: { name: string }[];
     album: { name: string; images: { url: string }[]; release_date: string };
   };
+
+  const pages = await Promise.all(
+    artists.map(artist =>
+      fetch(
+        `https://api.spotify.com/v1/search?${new URLSearchParams({ q: artist, type: 'track' })}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+        .then(r => r.ok ? r.json() : { tracks: { items: [] } })
+        .catch(() => ({ tracks: { items: [] } })),
+    ),
+  );
 
   const seen = new Set<string>();
   const all: (TrackInfo & { popularity: number })[] = [];
