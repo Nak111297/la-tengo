@@ -55,17 +55,17 @@ export function isPlayerReady(): boolean {
 }
 
 const GENRE_QUERIES: Record<string, string> = {
-  'EDM':               'genre:edm',
-  'Pop Latino':        'genre:latin pop',
-  'Reggaetón':         'genre:reggaeton',
-  'Rock en Español':   'genre:rock latino',
-  'Pop Internacional': 'genre:pop',
-  '2000s Hits':        'genre:pop year:2000-2009',
-  'Fiesta / Party':    'genre:dance',
-  'Hip Hop':           'genre:hip-hop',
-  'R&B':               'genre:r-n-b',
-  '80s Hits':          'genre:pop year:1980-1989',
-  '90s Hits':          'genre:pop year:1990-1999',
+  'EDM':               'edm electronic dance',
+  'Pop Latino':        'pop latino',
+  'Reggaetón':         'reggaeton',
+  'Rock en Español':   'rock en espanol',
+  'Pop Internacional': 'pop hits',
+  '2000s Hits':        'pop hits 2000s',
+  'Fiesta / Party':    'fiesta party dance',
+  'Hip Hop':           'hip hop rap',
+  'R&B':               'rnb soul',
+  '80s Hits':          '80s hits classic pop',
+  '90s Hits':          '90s hits pop',
 };
 
 export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
@@ -87,7 +87,7 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
 
   if (!searchRes.ok) {
     const err = await searchRes.json().catch(() => ({}));
-    throw new Error(`Search "${genre}": ${searchRes.status} — ${JSON.stringify(err)}`);
+    throw new Error(`Search "${genre}" (q=${query}): ${searchRes.status} — ${JSON.stringify(err)}`);
   }
 
   const data = await searchRes.json();
