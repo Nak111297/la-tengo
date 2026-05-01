@@ -625,52 +625,36 @@ const GENRE_SONGS: Record<string, SongEntry[]> = {
 };
 
 async function findTrack(song: SongEntry, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
-  // Try song name only first — most reliable; then fallback to song + artist
-  const queries = [song.name, `${song.name} ${song.artist}`];
-  let lastError = 'none-tried';
-
-  for (const q of queries) {
-    try {
-      const res = await fetch(
-        `https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'track' })}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      if (!res.ok) {
-        lastError = `http-${res.status}`;
-        continue;
-      }
-      const data = await res.json();
-      const items: Array<{
-        uri: string;
-        artists: { name: string }[];
-        album: { name: string; images: { url: string }[] };
-      }> = data.tracks?.items ?? [];
-      if (items.length === 0) {
-        lastError = 'no-items';
-        continue;
-      }
-      // Prefer a result whose artist contains the expected artist's first word
-      const firstName = song.artist.toLowerCase().split(/\s+/)[0];
-      const match =
-        items.find(t => t.artists.some(a => a.name.toLowerCase().includes(firstName))) ??
-        items[0];
-      return {
-        result: {
-          uri: match.uri,
-          name: song.name,
-          artist: song.artist,
-          album: match.album?.name ?? '',
-          albumArt: match.album?.images?.[0]?.url ?? '',
-          year: song.year,
-        },
-        error: null,
-      };
-    } catch (e) {
-      lastError = e instanceof Error ? `exception-${e.message}` : 'exception';
-      continue;
-    }
+  // Exact field-filter query — finds the specific song as it exists on Spotify
+  const q = `track:"${song.name}" artist:"${song.artist}"`;
+  try {
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'track' })}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) return { result: null, error: `http-${res.status}` };
+    const data = await res.json();
+    const items: Array<{
+      uri: string;
+      artists: { name: string }[];
+      album: { name: string; images: { url: string }[] };
+    }> = data.tracks?.items ?? [];
+    if (items.length === 0) return { result: null, error: 'no-items' };
+    const match = items[0];
+    return {
+      result: {
+        uri: match.uri,
+        name: song.name,
+        artist: song.artist,
+        album: match.album?.name ?? '',
+        albumArt: match.album?.images?.[0]?.url ?? '',
+        year: song.year,
+      },
+      error: null,
+    };
+  } catch (e) {
+    return { result: null, error: e instanceof Error ? `exception-${e.message}` : 'exception' };
   }
-  return { result: null, error: lastError };
 }
 
 export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
@@ -680,19 +664,16 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const songs = GENRE_SONGS[genre];
   if (!songs) throw new Error(`Género no configurado: ${genre}`);
 
-  // Pick 5 random songs, resolve sequentially to avoid Spotify dev-mode rate limits
-  const picked = shuffleArray([...songs]).slice(0, 5);
+  // Pick 1 random song — single search to stay well under dev-mode rate limits
+  const song = shuffleArray([...songs])[0];
+  const { result, error } = await findTrack(song, token);
 
-  const tracks: TrackInfo[] = [];
-  const errs: string[] = [];
-  for (const song of picked) {
-    const { result, error } = await findTrack(song, token);
-    if (result) tracks.push(result);
-    else errs.push(`${song.name}: ${error}`);
-  }
-
-  if (tracks.length === 0) throw new Error(`No resultados (${genre}). ${errs.join(' | ')}`);
-  return tracks;
+  if (result) return [result];
+  throw new Error(
+    error === 'http-429'
+      ? 'Límite de Spotify alcanzado. Espera unos segundos e intenta de nuevo.'
+      : `No se encontró "${song.name}" (${error})`,
+  );
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
