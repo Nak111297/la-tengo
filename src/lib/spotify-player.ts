@@ -43,11 +43,16 @@ async function connectMobileDevice(): Promise<void> {
   if (!res.ok) return;
 
   const data = await res.json();
-  const devices: { id: string; is_active: boolean }[] = data.devices ?? [];
-  const active = devices.find(d => d.is_active) ?? devices[0];
+  const devices: { id: string; is_active: boolean; name: string; type: string }[] = data.devices ?? [];
 
-  if (active?.id) {
-    deviceId = active.id;
+  // Prefer Smartphone; never pick our own SDK desktop player
+  const picked =
+    devices.find(d => d.type === 'Smartphone') ??
+    devices.find(d => d.name !== 'La Tengo') ??
+    devices[0];
+
+  if (picked?.id) {
+    deviceId = picked.id;
     playerReady = true;
     onReadyCallback?.();
   }
