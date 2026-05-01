@@ -52,7 +52,7 @@ export function useGame() {
       });
       return null;
     } catch (e) {
-      return 'Error cargando canciones. Intenta de nuevo.';
+      return e instanceof Error ? e.message : 'Error desconocido';
     }
   }, [update]);
 

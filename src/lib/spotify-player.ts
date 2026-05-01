@@ -77,7 +77,7 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   if (!playlistId) throw new Error(`No playlist configured for genre: ${genre}`);
 
   const tracksRes = await fetch(
-    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(uri,name,artists,album))`,
+    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
 
