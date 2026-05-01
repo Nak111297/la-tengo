@@ -624,6 +624,55 @@ const GENRE_SONGS: Record<string, SongEntry[]> = {
   ],
 };
 
+async function findTrack(song: SongEntry, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
+  // Try song name only first — most reliable; then fallback to song + artist
+  const queries = [song.name, `${song.name} ${song.artist}`];
+  let lastError = 'none-tried';
+
+  for (const q of queries) {
+    try {
+      const res = await fetch(
+        `https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'track' })}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) {
+        lastError = `http-${res.status}`;
+        continue;
+      }
+      const data = await res.json();
+      const items: Array<{
+        uri: string;
+        artists: { name: string }[];
+        album: { name: string; images: { url: string }[] };
+      }> = data.tracks?.items ?? [];
+      if (items.length === 0) {
+        lastError = 'no-items';
+        continue;
+      }
+      // Prefer a result whose artist contains the expected artist's first word
+      const firstName = song.artist.toLowerCase().split(/\s+/)[0];
+      const match =
+        items.find(t => t.artists.some(a => a.name.toLowerCase().includes(firstName))) ??
+        items[0];
+      return {
+        result: {
+          uri: match.uri,
+          name: song.name,
+          artist: song.artist,
+          album: match.album?.name ?? '',
+          albumArt: match.album?.images?.[0]?.url ?? '',
+          year: song.year,
+        },
+        error: null,
+      };
+    } catch (e) {
+      lastError = e instanceof Error ? `exception-${e.message}` : 'exception';
+      continue;
+    }
+  }
+  return { result: null, error: lastError };
+}
+
 export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
@@ -631,38 +680,19 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const songs = GENRE_SONGS[genre];
   if (!songs) throw new Error(`Género no configurado: ${genre}`);
 
-  // Pick 5 random songs from the curated list
-  const picked = shuffleArray([...songs]).slice(0, 5);
+  // Pick 8 random songs — extra margin in case some fail to resolve
+  const picked = shuffleArray([...songs]).slice(0, 8);
 
-  // Resolve each to a Spotify URI — one search per song, 5 parallel requests
-  const results = await Promise.all(
-    picked.map(async (song) => {
-      try {
-        const q = `${song.name} ${song.artist}`;
-        const res = await fetch(
-          `https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'track' })}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!res.ok) return null;
-        const data = await res.json();
-        const t = data.tracks?.items?.[0];
-        if (!t) return null;
-        return {
-          uri: t.uri,
-          name: song.name,
-          artist: song.artist,
-          album: t.album?.name ?? '',
-          albumArt: t.album?.images?.[0]?.url ?? '',
-          year: song.year,
-        } as TrackInfo;
-      } catch {
-        return null;
-      }
-    }),
-  );
+  const results = await Promise.all(picked.map(s => findTrack(s, token)));
 
-  const tracks = results.filter((t): t is TrackInfo => t !== null);
-  if (tracks.length === 0) throw new Error(`Sin resultados para: ${genre}`);
+  const tracks = results
+    .map(r => r.result)
+    .filter((t): t is TrackInfo => t !== null);
+
+  if (tracks.length === 0) {
+    const errs = results.map((r, i) => `${picked[i].name}: ${r.error}`).join(' | ');
+    throw new Error(`No resultados (${genre}). ${errs}`);
+  }
   return tracks;
 }
 
