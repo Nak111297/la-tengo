@@ -73,8 +73,14 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
 
+  // Verify token works
+  const meRes = await fetch('https://api.spotify.com/v1/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!meRes.ok) throw new Error(`Token inválido: ${meRes.status}. Reconecta Spotify (↺).`);
+
   const playlistId = GENRE_PLAYLISTS[genre];
-  if (!playlistId) throw new Error(`No playlist configured for genre: ${genre}`);
+  if (!playlistId) throw new Error(`No playlist configurado para: ${genre}`);
 
   const tracksRes = await fetch(
     `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50`,
@@ -83,7 +89,7 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
 
   if (!tracksRes.ok) {
     const err = await tracksRes.json().catch(() => ({}));
-    throw new Error(`Tracks fetch failed: ${tracksRes.status} ${JSON.stringify(err)}`);
+    throw new Error(`Playlist ${playlistId}: ${tracksRes.status} — ${JSON.stringify(err)}`);
   }
   const tracksData = await tracksRes.json();
 
