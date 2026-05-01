@@ -83,17 +83,21 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   }
   const data = await res.json();
 
-  const playlists = data.playlists?.items || [];
-  if (playlists.length === 0) return [];
+  const playlists = (data.playlists?.items || []).filter(Boolean);
+  if (playlists.length === 0) throw new Error('No playlists found for genre');
 
   const playlist = playlists[Math.floor(Math.random() * Math.min(3, playlists.length))];
+  if (!playlist?.id) throw new Error('Playlist has no ID');
 
   const tracksRes = await fetch(
     `https://api.spotify.com/v1/playlists/${playlist.id}/tracks?limit=50`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
 
-  if (!tracksRes.ok) return [];
+  if (!tracksRes.ok) {
+    const err = await tracksRes.json().catch(() => ({}));
+    throw new Error(`Tracks fetch failed: ${tracksRes.status} ${JSON.stringify(err)}`);
+  }
   const tracksData = await tracksRes.json();
 
   const tracks: TrackInfo[] = (tracksData.items || [])

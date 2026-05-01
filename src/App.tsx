@@ -87,8 +87,15 @@ export default function App() {
           <>
             <GenreSelect currentTeam={currentTeam} onSelect={handleGenreSelect} loading={loading} />
             {genreError && (
-              <div className="fixed bottom-6 left-4 right-4 rounded-xl bg-red-900/80 p-4 text-center text-sm text-red-200">
-                {genreError}
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
+                <div className="w-full max-w-sm rounded-2xl bg-zinc-900 border border-red-500 p-6 text-center">
+                  <p className="text-2xl mb-2">⚠️</p>
+                  <p className="text-red-400 font-bold mb-1">Error cargando canciones</p>
+                  <p className="text-sm text-zinc-400 mb-4">{genreError}</p>
+                  <button onClick={() => setGenreError(null)} className="rounded-xl bg-zinc-700 px-6 py-2 text-sm font-bold">
+                    Intentar de nuevo
+                  </button>
+                </div>
               </div>
             )}
           </>
