@@ -54,43 +54,29 @@ export function isPlayerReady(): boolean {
   return playerReady;
 }
 
-const GENRE_PLAYLIST_QUERIES: Record<string, string> = {
-  'Pop Latino': 'pop latino hits',
-  'Reggaetón': 'reggaeton hits',
-  'Rock en Español': 'rock en español clasicos',
-  'Pop Internacional': 'global top hits pop',
-  '2000s Hits': '2000s throwback hits',
-  'Fiesta / Party': 'fiesta latina party',
-  'Hip Hop': 'hip hop hits',
-  'R&B': 'r&b hits',
-  '80s Hits': '80s greatest hits',
-  '90s Hits': '90s hits throwback',
+// Fixed Spotify editorial playlist IDs per genre — swap any ID to change the playlist
+const GENRE_PLAYLISTS: Record<string, string> = {
+  'Pop Latino':        '37i9dQZF1DX10zKzsJ2jva', // ¡Viva Latino!
+  'Reggaetón':         '37i9dQZF1DXa2PvUpywmrr', // Baila Reggaeton
+  'Rock en Español':   '37i9dQZF1DXe2bobNYDtW8', // Rock en Español
+  'Pop Internacional': '37i9dQZF1DXcBWIGoYBM5M', // Today's Top Hits
+  '2000s Hits':        '37i9dQZF1DX4o1oenSJRJd', // I Love My 00s Pop
+  'Fiesta / Party':    '37i9dQZF1DX0HRj9P7NxeE', // Viva la Fiesta
+  'Hip Hop':           '37i9dQZF1DX0XUsuxWHRQd', // RapCaviar
+  'R&B':               '37i9dQZF1DX4SBhb3fqCJd', // Are & Be
+  '80s Hits':          '37i9dQZF1DXb57XD9pUNby', // 80s Party Anthems
+  '90s Hits':          '37i9dQZF1DXbTxeAdrVG2l', // 90s Hits
 };
 
 export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
 
-  const query = GENRE_PLAYLIST_QUERIES[genre] || genre;
-  const res = await fetch(
-    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=playlist&limit=5`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`Spotify search failed: ${res.status} ${JSON.stringify(err)}`);
-  }
-  const data = await res.json();
-
-  const playlists = (data.playlists?.items || []).filter(Boolean);
-  if (playlists.length === 0) throw new Error('No playlists found for genre');
-
-  const playlist = playlists[Math.floor(Math.random() * Math.min(3, playlists.length))];
-  if (!playlist?.id) throw new Error('Playlist has no ID');
+  const playlistId = GENRE_PLAYLISTS[genre];
+  if (!playlistId) throw new Error(`No playlist configured for genre: ${genre}`);
 
   const tracksRes = await fetch(
-    `https://api.spotify.com/v1/playlists/${playlist.id}/tracks?limit=50`,
+    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(uri,name,artists,album))`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
 
