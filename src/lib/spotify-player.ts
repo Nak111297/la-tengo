@@ -72,38 +72,46 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
 
-  const meRes = await fetch('https://api.spotify.com/v1/me', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!meRes.ok) throw new Error(`Token inválido: ${meRes.status}. Reconecta Spotify (↺).`);
-
   const query = GENRE_QUERIES[genre];
   if (!query) throw new Error(`Género no configurado: ${genre}`);
 
-  const params = new URLSearchParams({ q: query, type: 'track' });
-  const searchRes = await fetch(
-    `https://api.spotify.com/v1/search?${params}`,
-    { headers: { Authorization: `Bearer ${token}` } },
+  const offsets = [0, 50, 100, 150, 200, 250];
+  const pages = await Promise.all(
+    offsets.map(offset =>
+      fetch(
+        `https://api.spotify.com/v1/search?${new URLSearchParams({ q: query, type: 'track', limit: '50', offset: String(offset) })}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+        .then(r => r.ok ? r.json() : { tracks: { items: [] } })
+        .catch(() => ({ tracks: { items: [] } })),
+    ),
   );
 
-  if (!searchRes.ok) {
-    const err = await searchRes.json().catch(() => ({}));
-    throw new Error(`Search "${genre}" (q=${query}): ${searchRes.status} — ${JSON.stringify(err)}`);
+  type RawTrack = {
+    uri: string; name: string;
+    artists: { name: string }[];
+    album: { name: string; images: { url: string }[]; release_date: string };
+  };
+
+  const seen = new Set<string>();
+  const tracks: TrackInfo[] = [];
+  for (const page of pages) {
+    for (const t of (page.tracks?.items ?? []) as (RawTrack | null)[]) {
+      if (t?.uri && !seen.has(t.uri)) {
+        seen.add(t.uri);
+        tracks.push({
+          uri: t.uri,
+          name: t.name,
+          artist: t.artists.map(a => a.name).join(', '),
+          album: t.album.name,
+          albumArt: t.album.images[0]?.url || '',
+          year: parseInt(t.album.release_date?.substring(0, 4) || '0', 10),
+        });
+      }
+    }
   }
 
-  const data = await searchRes.json();
-  const items = data.tracks?.items ?? [];
-
-  const tracks: TrackInfo[] = items
-    .filter((t: { uri: string } | null) => t?.uri)
-    .map((t: { uri: string; name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[]; release_date: string } }) => ({
-      uri: t.uri,
-      name: t.name,
-      artist: t.artists.map((a: { name: string }) => a.name).join(', '),
-      album: t.album.name,
-      albumArt: t.album.images[0]?.url || '',
-      year: parseInt(t.album.release_date?.substring(0, 4) || '0', 10),
-    }));
+  if (tracks.length === 0) throw new Error(`Search "${genre}" (q=${query}): sin resultados`);
 
   return shuffleArray(tracks);
 }
