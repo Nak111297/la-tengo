@@ -80,8 +80,9 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const query = GENRE_QUERIES[genre];
   if (!query) throw new Error(`Género no configurado: ${genre}`);
 
+  const params = new URLSearchParams({ q: query, type: 'track' });
   const searchRes = await fetch(
-    `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`,
+    `https://api.spotify.com/v1/search?${params}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
 
