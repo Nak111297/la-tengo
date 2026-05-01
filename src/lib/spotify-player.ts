@@ -141,26 +141,29 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   };
 
   const seen = new Set<string>();
-  const tracks: TrackInfo[] = [];
+  const all: (TrackInfo & { popularity: number })[] = [];
   for (const page of pages) {
     for (const t of (page.tracks?.items ?? []) as (RawTrack | null)[]) {
-      if (t?.uri && !seen.has(t.uri) && (t.popularity ?? 0) >= 50) {
+      if (t?.uri && !seen.has(t.uri)) {
         seen.add(t.uri);
-        tracks.push({
+        all.push({
           uri: t.uri,
           name: t.name,
           artist: t.artists.map(a => a.name).join(', '),
           album: t.album.name,
           albumArt: t.album.images[0]?.url || '',
           year: parseInt(t.album.release_date?.substring(0, 4) || '0', 10),
+          popularity: t.popularity ?? 0,
         });
       }
     }
   }
 
-  if (tracks.length === 0) throw new Error(`Search "${genre}" (q=${query}): sin resultados`);
+  if (all.length === 0) throw new Error(`Search "${genre}" (q=${query}): sin resultados`);
 
-  return shuffleArray(tracks);
+  // Sort by popularity desc, take top 60, then shuffle so order varies each round
+  const top = all.sort((a, b) => b.popularity - a.popularity).slice(0, 60);
+  return shuffleArray(top.map(({ popularity: _p, ...track }) => track));
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
