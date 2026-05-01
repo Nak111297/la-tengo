@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { handleAuthCallback, isAuthenticated } from './lib/spotify';
+import { handleAuthCallback, isAuthenticated, clearAuth, redirectToSpotifyAuth } from './lib/spotify';
 import { initPlayer } from './lib/spotify-player';
 import { useGame } from './lib/useGame';
 import Login from './screens/Login';
@@ -43,6 +43,11 @@ export default function App() {
     if (error) setGenreError(error);
   }, [selectGenre]);
 
+  const reconnectSpotify = () => {
+    clearAuth();
+    redirectToSpotifyAuth();
+  };
+
   if (!authed) return <Login />;
 
   if (!playerReady) {
@@ -73,6 +78,9 @@ export default function App() {
             ))}
             <button onClick={() => { if (confirm('¿Reiniciar partida?')) resetGame(); }} className="text-zinc-600 hover:text-red-400">
               ✕
+            </button>
+            <button onClick={reconnectSpotify} className="text-zinc-600 hover:text-green-400" title="Reconectar Spotify">
+              ↺
             </button>
           </div>
         </div>
