@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { TEAM_COLORS } from '../types';
 
 interface Props {
-  onStart: (teamNames: string[]) => void;
+  onStart: (teamNames: string[], maxRounds: number) => void;
 }
+
+const ROUND_OPTIONS = [5, 8, 10, 15, 20];
 
 export default function Setup({ onStart }: Props) {
   const [teams, setTeams] = useState(['', '']);
+  const [maxRounds, setMaxRounds] = useState(10);
 
   const addTeam = () => {
     if (teams.length < 8) setTeams([...teams, '']);
@@ -28,10 +31,7 @@ export default function Setup({ onStart }: Props) {
       <div className="w-full max-w-sm space-y-3">
         {teams.map((name, i) => (
           <div key={i} className="flex items-center gap-2">
-            <span
-              className="h-5 w-5 shrink-0 rounded-full"
-              style={{ background: TEAM_COLORS[i % TEAM_COLORS.length] }}
-            />
+            <span className="h-5 w-5 shrink-0 rounded-full" style={{ background: TEAM_COLORS[i % TEAM_COLORS.length] }} />
             <input
               value={name}
               onChange={(e) => {
@@ -55,8 +55,27 @@ export default function Setup({ onStart }: Props) {
         )}
       </div>
 
+      <div className="w-full max-w-sm">
+        <p className="mb-2 text-sm text-zinc-400">Rondas</p>
+        <div className="flex gap-2">
+          {ROUND_OPTIONS.map(n => (
+            <button
+              key={n}
+              onClick={() => setMaxRounds(n)}
+              className={`flex-1 rounded-xl py-3 text-sm font-bold transition ${
+                maxRounds === n
+                  ? 'bg-purple-600 text-white'
+                  : 'border border-zinc-700 text-zinc-400 hover:border-purple-500'
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <button
-        onClick={() => onStart(teams.map((t) => t.trim()))}
+        onClick={() => onStart(teams.map((t) => t.trim()), maxRounds)}
         disabled={!canStart}
         className="w-full max-w-sm rounded-2xl bg-purple-600 py-4 text-lg font-bold text-white transition hover:bg-purple-500 disabled:opacity-40"
       >

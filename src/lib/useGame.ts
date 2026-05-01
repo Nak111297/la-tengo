@@ -8,12 +8,14 @@ const INITIAL_STATE: GameState = {
   teams: [],
   currentTeamIndex: 0,
   round: 1,
+  maxRounds: 10,
   phase: 'setup',
   currentTrackUri: null,
   currentTrack: null,
   betSeconds: null,
   stealMode: false,
   stealTeamIndex: null,
+  noneScored: false,
 };
 
 export function useGame() {
@@ -30,14 +32,14 @@ export function useGame() {
     setState((prev) => ({ ...prev, ...partial }));
   }, []);
 
-  const startGame = useCallback((teamNames: string[]) => {
+  const startGame = useCallback((teamNames: string[], maxRounds: number) => {
     const teams: Team[] = teamNames.map((name, i) => ({
       id: `team-${i}`,
       name,
       color: TEAM_COLORS[i % TEAM_COLORS.length],
       score: 0,
     }));
-    update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1 });
+    update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1, maxRounds });
   }, [update]);
 
   const selectGenre = useCallback(async (genre: string): Promise<string | null> => {
@@ -115,7 +117,8 @@ export function useGame() {
   const playerDidNotGetIt = useCallback(() => {
     setState((prev) => {
       if (prev.stealMode) {
-        return { ...prev, phase: 'genre-select', stealMode: false, stealTeamIndex: null };
+        // Nobody got it — show song reveal before moving on
+        return { ...prev, phase: 'reveal', stealMode: false, stealTeamIndex: null, noneScored: true };
       }
       const stealIdx = (prev.currentTeamIndex + 1) % prev.teams.length;
       return { ...prev, stealMode: true, stealTeamIndex: stealIdx, phase: 'playing', betSeconds: 30 };
@@ -150,6 +153,10 @@ export function useGame() {
     }
   }, [state.stealMode, clearTimers]);
 
+  const noScoreRound = useCallback(() => {
+    setState((prev) => ({ ...prev, phase: 'round-summary', noneScored: false }));
+  }, []);
+
   const confirmCorrect = useCallback((gotArtist: boolean, gotSong: boolean) => {
     setState((prev) => {
       const scoringTeamIdx = prev.stealMode ? (prev.stealTeamIndex ?? 0) : prev.currentTeamIndex;
@@ -170,23 +177,26 @@ export function useGame() {
   const nextRound = useCallback(() => {
     trackIndexRef.current += 1;
     setState((prev) => {
-      if (trackIndexRef.current >= tracksRef.current.length) {
-        return { ...prev, phase: 'genre-select', stealMode: false, stealTeamIndex: null };
+      const nextRoundNum = prev.round + 1;
+      if (nextRoundNum > prev.maxRounds) {
+        return { ...prev, phase: 'finished', stealMode: false, stealTeamIndex: null, noneScored: false };
       }
-
+      if (trackIndexRef.current >= tracksRef.current.length) {
+        return { ...prev, round: nextRoundNum, phase: 'genre-select', stealMode: false, stealTeamIndex: null, noneScored: false };
+      }
       const nextTeam = (prev.currentTeamIndex + 1) % prev.teams.length;
       const nextTrack = tracksRef.current[trackIndexRef.current];
-
       return {
         ...prev,
         currentTeamIndex: nextTeam,
-        round: prev.round + 1,
+        round: nextRoundNum,
         phase: 'genre-select',
         currentTrack: nextTrack,
         currentTrackUri: nextTrack.uri,
         betSeconds: null,
         stealMode: false,
         stealTeamIndex: null,
+        noneScored: false,
       };
     });
   }, []);
@@ -212,6 +222,7 @@ export function useGame() {
     betAndPlay,
     buzzIn,
     playerGotIt,
+    noScoreRound,
     markCorrect,
     playerDidNotGetIt,
     confirmCorrect,

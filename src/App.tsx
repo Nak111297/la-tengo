@@ -12,6 +12,7 @@ import GuessPrompt from './screens/GuessPrompt';
 import Reveal from './screens/Reveal';
 import ScoreCheck from './screens/ScoreCheck';
 import RoundSummary from './screens/RoundSummary';
+import Finished from './screens/Finished';
 
 export default function App() {
   const [authed, setAuthed] = useState(false);
@@ -22,7 +23,7 @@ export default function App() {
   const {
     state, timeLeft,
     startGame, selectGenre, betAndPlay,
-    buzzIn, playerGotIt, markCorrect, playerDidNotGetIt,
+    buzzIn, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
     confirmCorrect, nextRound, skipSong, resetGame,
   } = useGame();
 
@@ -66,7 +67,7 @@ export default function App() {
         <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-zinc-800 bg-zinc-950/90 px-4 py-2 backdrop-blur">
           <span className="text-sm font-bold text-purple-400">🎵 La Tengo</span>
           <div className="flex items-center gap-3 text-xs">
-            <span className="text-zinc-500">Ronda {state.round}</span>
+            <span className="text-zinc-500">Ronda {state.round}/{state.maxRounds}</span>
             {state.teams.map((t) => (
               <span key={t.id} className="font-bold" style={{ color: t.color }}>
                 {t.score}
@@ -85,6 +86,10 @@ export default function App() {
       <div className={state.phase !== 'setup' ? 'pt-12' : ''}>
         {state.phase === 'setup' && (
           <Setup onStart={startGame} />
+        )}
+
+        {state.phase === 'finished' && (
+          <Finished teams={state.teams} onNewGame={resetGame} />
         )}
 
         {state.phase === 'genre-select' && currentTeam && (
@@ -135,8 +140,10 @@ export default function App() {
         {state.phase === 'reveal' && state.currentTrack && (
           <Reveal
             track={state.currentTrack}
+            noneScored={state.noneScored}
             onCorrect={markCorrect}
             onWrong={playerDidNotGetIt}
+            onNoScore={noScoreRound}
           />
         )}
 

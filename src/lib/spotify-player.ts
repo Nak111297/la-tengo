@@ -106,6 +106,12 @@ function shuffleArray<T>(arr: T[]): T[] {
 export async function playSong(trackUri: string): Promise<void> {
   const token = await getToken();
   if (!token || !deviceId) return;
+  // Wake/transfer device before playing — keeps mobile Spotify active between rounds
+  await fetch('https://api.spotify.com/v1/me/player', {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_ids: [deviceId], play: false }),
+  }).catch(() => {});
   await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },

@@ -9,12 +9,14 @@ export interface GameState {
   teams: Team[];
   currentTeamIndex: number;
   round: number;
+  maxRounds: number;
   phase: GamePhase;
   currentTrackUri: string | null;
   currentTrack: TrackInfo | null;
   betSeconds: number | null;
   stealMode: boolean;
   stealTeamIndex: number | null;
+  noneScored: boolean;
 }
 
 export type GamePhase =
@@ -25,8 +27,6 @@ export type GamePhase =
   | 'guess-prompt'
   | 'reveal'
   | 'score-artist'
-  | 'score-song'
-  | 'score-team'
   | 'round-summary'
   | 'finished';
 
