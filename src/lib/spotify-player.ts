@@ -126,8 +126,11 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
 
-  const artists = GENRE_ARTISTS[genre];
-  if (!artists) throw new Error(`Género no configurado: ${genre}`);
+  const allArtists = GENRE_ARTISTS[genre];
+  if (!allArtists) throw new Error(`Género no configurado: ${genre}`);
+
+  // Pick 10 random artists each load — avoids rate limiting, adds variety per session
+  const artists = shuffleArray(allArtists).slice(0, 10);
 
   type RawTrack = {
     uri: string; name: string; popularity: number;
