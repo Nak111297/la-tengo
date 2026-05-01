@@ -1,117 +1,46 @@
 import { getToken } from './spotify';
 import type { TrackInfo } from '../types';
 
-let player: Spotify.Player | null = null;
 let deviceId: string | null = null;
-let playerReady = false;
-let onReadyCallback: (() => void) | null = null;
 
-export function isMobile(): boolean {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+export interface SpotifyDevice {
+  id: string;
+  name: string;
+  type: string;
+  is_active: boolean;
 }
 
-export function initPlayer(onReady: () => void): void {
-  onReadyCallback = onReady;
-
-  if (isMobile()) {
-    connectMobileDevice();
-    return;
-  }
-
-  if (document.getElementById('spotify-sdk')) {
-    if (playerReady) onReady();
-    return;
-  }
-
-  const script = document.createElement('script');
-  script.id = 'spotify-sdk';
-  script.src = 'https://sdk.scdn.co/spotify-player.js';
-  document.body.appendChild(script);
-
-  (window as unknown as Record<string, unknown>).onSpotifyWebPlaybackSDKReady = () => {
-    createPlayer();
-  };
-}
-
-async function connectMobileDevice(): Promise<void> {
+export async function getDevices(): Promise<SpotifyDevice[]> {
   const token = await getToken();
-  if (!token) return;
-
+  if (!token) return [];
   const res = await fetch('https://api.spotify.com/v1/me/player/devices', {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) return;
-
+  if (!res.ok) return [];
   const data = await res.json();
-  const devices: { id: string; is_active: boolean; name: string; type: string }[] = data.devices ?? [];
-
-  // Prefer Smartphone; never pick our own SDK desktop player
-  const picked =
-    devices.find(d => d.type === 'Smartphone') ??
-    devices.find(d => d.name !== 'La Tengo') ??
-    devices[0];
-
-  if (!picked?.id) return;
-
-  // Transfer playback to this device so subsequent play commands land on it
-  await fetch('https://api.spotify.com/v1/me/player', {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ device_ids: [picked.id], play: false }),
-  }).catch(() => {});
-
-  deviceId = picked.id;
-  playerReady = true;
-  onReadyCallback?.();
+  return data.devices ?? [];
 }
 
-export async function retryMobileConnect(): Promise<boolean> {
-  await connectMobileDevice();
-  return playerReady;
-}
-
-async function createPlayer(): Promise<void> {
-  const token = await getToken();
-  if (!token) return;
-
-  player = new Spotify.Player({
-    name: 'La Tengo',
-    getOAuthToken: async (cb) => {
-      const t = await getToken();
-      cb(t || '');
-    },
-    volume: 0.8,
-  });
-
-  player.addListener('ready', ({ device_id }) => {
-    deviceId = device_id;
-    playerReady = true;
-    onReadyCallback?.();
-  });
-
-  player.addListener('not_ready', () => {
-    playerReady = false;
-  });
-
-  player.connect();
+export function selectDevice(id: string): void {
+  deviceId = id;
 }
 
 export function isPlayerReady(): boolean {
-  return playerReady;
+  return !!deviceId;
 }
 
 const GENRE_QUERIES: Record<string, string> = {
-  'EDM':               'edm electronic dance',
-  'Pop Latino':        'pop latino',
-  'Reggaetón':         'reggaeton',
-  'Rock en Español':   'rock en espanol',
-  'Pop Internacional': 'pop hits',
-  '2000s Hits':        'pop hits 2000s',
-  'Fiesta / Party':    'fiesta party dance',
-  'Hip Hop':           'hip hop rap',
-  'R&B':               'rnb soul',
-  '80s Hits':          '80s hits classic pop',
-  '90s Hits':          '90s hits pop',
+  'EDM':               'genre:edm',
+  'Pop Latino':        'genre:latin pop',
+  'Reggaetón':         'genre:reggaeton',
+  'Rock en Español':   'genre:spanish rock',
+  'Pop Internacional': 'genre:pop',
+  '2000s Hits':        'genre:pop year:2000-2009',
+  'Fiesta / Party':    'genre:latin',
+  'Hip Hop':           'genre:hip-hop',
+  'R&B':               'genre:r-n-b',
+  '80s Hits':          'genre:pop year:1980-1989',
+  '90s Hits':          'genre:pop year:1990-1999',
 };
 
 export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
@@ -121,7 +50,7 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
   const query = GENRE_QUERIES[genre];
   if (!query) throw new Error(`Género no configurado: ${genre}`);
 
-  // limit param causes 400 on this app — use default (20/page) with offsets
+  // limit param causes 400 — use default (20/page) with offsets
   const offsets = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180];
   const pages = await Promise.all(
     offsets.map(offset =>
@@ -159,9 +88,8 @@ export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
     }
   }
 
-  if (all.length === 0) throw new Error(`Search "${genre}" (q=${query}): sin resultados`);
+  if (all.length === 0) throw new Error(`Sin resultados para: ${genre}`);
 
-  // Sort by popularity desc, take top 60, then shuffle so order varies each round
   const top = all.sort((a, b) => b.popularity - a.popularity).slice(0, 60);
   return shuffleArray(top.map(({ popularity: _p, ...track }) => track));
 }
@@ -178,13 +106,9 @@ function shuffleArray<T>(arr: T[]): T[] {
 export async function playSong(trackUri: string): Promise<void> {
   const token = await getToken();
   if (!token || !deviceId) return;
-
   await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ uris: [trackUri], position_ms: 0 }),
   });
 }
@@ -192,26 +116,8 @@ export async function playSong(trackUri: string): Promise<void> {
 export async function pauseSong(): Promise<void> {
   const token = await getToken();
   if (!token || !deviceId) return;
-
   await fetch(`https://api.spotify.com/v1/me/player/pause?device_id=${deviceId}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
   });
-}
-
-export async function setVolume(pct: number): Promise<void> {
-  const token = await getToken();
-  if (!token || !deviceId) return;
-
-  await fetch(
-    `https://api.spotify.com/v1/me/player/volume?volume_percent=${Math.round(pct)}&device_id=${deviceId}`,
-    { method: 'PUT', headers: { Authorization: `Bearer ${token}` } },
-  );
-}
-
-export function disconnectPlayer(): void {
-  player?.disconnect();
-  player = null;
-  deviceId = null;
-  playerReady = false;
 }

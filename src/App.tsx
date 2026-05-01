@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { handleAuthCallback, isAuthenticated, clearAuth, redirectToSpotifyAuth } from './lib/spotify';
-import { initPlayer, isMobile, retryMobileConnect } from './lib/spotify-player';
+import { selectDevice } from './lib/spotify-player';
 import { useGame } from './lib/useGame';
 import Login from './screens/Login';
+import DevicePicker from './screens/DevicePicker';
 import Setup from './screens/Setup';
 import GenreSelect from './screens/GenreSelect';
 import BetTime from './screens/BetTime';
@@ -28,10 +29,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const token = await handleAuthCallback();
-      if (token || isAuthenticated()) {
-        setAuthed(true);
-        initPlayer(() => setPlayerReady(true));
-      }
+      if (token || isAuthenticated()) setAuthed(true);
     })();
   }, []);
 
@@ -51,32 +49,10 @@ export default function App() {
   if (!authed) return <Login />;
 
   if (!playerReady) {
-    if (isMobile()) {
-      return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 text-center">
-          <p className="text-4xl">📱</p>
-          <p className="text-lg font-bold text-white">Abre Spotify en este celular</p>
-          <p className="text-sm text-zinc-400">
-            Abre la app de Spotify, reproduce cualquier canción y regresa aquí.
-          </p>
-          <button
-            onClick={async () => {
-              const ok = await retryMobileConnect();
-              if (ok) setPlayerReady(true);
-            }}
-            className="rounded-2xl bg-green-500 px-8 py-3 font-bold text-black"
-          >
-            Ya lo abrí — Conectar
-          </button>
-        </div>
-      );
-    }
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-        <div className="animate-spin text-4xl">🎵</div>
-        <p className="text-zinc-400">Conectando reproductor de Spotify...</p>
-        <p className="text-xs text-zinc-600">Asegúrate de tener Spotify abierto en algún dispositivo</p>
-      </div>
+      <DevicePicker
+        onSelect={(id) => { selectDevice(id); setPlayerReady(true); }}
+      />
     );
   }
 
