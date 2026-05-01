@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import type { GameState, Team, TrackInfo } from '../types';
 import { TEAM_COLORS } from '../types';
 import { calculateScore } from './scoring';
