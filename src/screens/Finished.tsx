@@ -6,7 +6,7 @@ interface Props {
   onNewGame: () => void;
 }
 
-const CONFETTI_COLORS = ['#f59e0b', '#ef4444', '#3b82f6', '#22c55e', '#8b5cf6', '#ec4899', '#f97316', '#fbbf24'];
+const CONFETTI_COLORS = ['#FF2E88', '#22D3EE', '#FFD23F', '#7CFF6B', '#FF4D4D', '#B8B3D9', '#FF2E88', '#22D3EE'];
 
 export default function Finished({ teams, onNewGame }: Props) {
   const sorted = [...teams].sort((a, b) => b.score - a.score);
@@ -24,33 +24,8 @@ export default function Finished({ teams, onNewGame }: Props) {
     })), []);
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center gap-8 overflow-hidden px-4 text-center bg-zinc-950">
-      <style>{`
-        @keyframes confetti-fall {
-          0%   { transform: translateY(-16px) rotate(0deg);   opacity: 1; }
-          80%  { opacity: 1; }
-          100% { transform: translateY(105vh) rotate(600deg); opacity: 0; }
-        }
-        @keyframes trophy-pop {
-          0%   { transform: scale(0.3) rotate(-12deg); opacity: 0; }
-          65%  { transform: scale(1.18) rotate(4deg);  opacity: 1; }
-          100% { transform: scale(1)   rotate(0deg);   opacity: 1; }
-        }
-        @keyframes slide-up-fade {
-          0%   { transform: translateY(20px); opacity: 0; }
-          100% { transform: translateY(0);    opacity: 1; }
-        }
-        @keyframes card-in {
-          0%   { transform: translateY(16px) scale(0.96); opacity: 0; }
-          100% { transform: translateY(0)    scale(1);    opacity: 1; }
-        }
-        .confetti-p  { position: absolute; top: -12px; animation: confetti-fall linear forwards; }
-        .anim-trophy { animation: trophy-pop    0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        .anim-slide  { animation: slide-up-fade 0.4s ease forwards; opacity: 0; }
-        .anim-card   { animation: card-in       0.35s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; opacity: 0; }
-      `}</style>
-
-      {/* Confetti layer */}
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-8 overflow-hidden px-4 text-center">
+      {/* Confetti */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         {particles.map((p) => (
           <div
@@ -71,18 +46,21 @@ export default function Finished({ teams, onNewGame }: Props) {
 
       {/* Header */}
       <div className="flex flex-col items-center gap-3">
-        <div className="anim-trophy flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 text-5xl shadow-2xl shadow-amber-900/50">
+        <div
+          className="anim-trophy flex h-24 w-24 items-center justify-center rounded-[28px] text-5xl"
+          style={{
+            background: 'linear-gradient(135deg, #FFD23F, #FF2E88)',
+            boxShadow: '0 0 40px rgba(255,210,63,0.5), 0 12px 40px rgba(0,0,0,0.4)',
+          }}
+        >
           🏆
         </div>
-        <h2
-          className="anim-slide text-4xl font-black text-white"
-          style={{ animationDelay: '0.25s' }}
-        >
+        <h2 className="anim-slide-up font-display text-4xl font-bold text-qr-text" style={{ animationDelay: '0.25s' }}>
           ¡Fin del juego!
         </h2>
         <p
-          className="anim-slide text-2xl font-black"
-          style={{ color: winner.color, animationDelay: '0.4s' }}
+          className="anim-slide-up font-display text-2xl font-bold"
+          style={{ color: winner.color, animationDelay: '0.4s', textShadow: `0 0 20px ${winner.color}80` }}
         >
           🎉 {winner.name} gana
         </p>
@@ -93,28 +71,28 @@ export default function Finished({ teams, onNewGame }: Props) {
         {sorted.map((team, i) => (
           <div
             key={team.id}
-            className={`anim-card flex items-center justify-between rounded-2xl px-5 py-4 ${
+            className={`anim-card flex items-center justify-between rounded-[24px] px-5 py-4 ${
               i === 0
-                ? 'border-2 border-amber-500/60 bg-zinc-900 shadow-lg shadow-amber-900/20'
-                : 'border border-zinc-800 bg-zinc-900'
+                ? 'border border-qr-primary/50 bg-qr-card/80 shadow-[0_0_24px_rgba(255,46,136,0.2)]'
+                : 'border border-white/10 bg-qr-card/60'
             }`}
             style={{ animationDelay: `${0.55 + i * 0.08}s` }}
           >
             <div className="flex items-center gap-3">
-              <span className="w-6 text-center text-sm font-black text-zinc-600">
+              <span className="w-6 text-center text-sm font-black text-qr-muted">
                 {i === 0 ? '👑' : `#${i + 1}`}
               </span>
               <span className="h-3 w-3 rounded-full" style={{ background: team.color }} />
-              <span className="font-bold text-white">{team.name}</span>
+              <span className="font-bold text-qr-text">{team.name}</span>
             </div>
-            <span className="text-2xl font-black text-amber-400">{team.score}</span>
+            <span className="font-display text-2xl font-bold text-qr-yellow">{team.score}</span>
           </div>
         ))}
       </div>
 
       <button
         onClick={onNewGame}
-        className="anim-slide w-full max-w-sm rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 py-4 text-lg font-black text-white shadow-lg shadow-fuchsia-900/30 transition active:scale-95 hover:brightness-110"
+        className="anim-slide-up w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
         style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.1}s` }}
       >
         Nueva partida

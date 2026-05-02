@@ -11,18 +11,10 @@ export default function RoundSummary({ teams, round, onNext, onEnd }: Props) {
   const sorted = [...teams].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 bg-zinc-950">
-      <style>{`
-        @keyframes card-in {
-          0%   { transform: translateY(18px) scale(0.96); opacity: 0; }
-          100% { transform: translateY(0)    scale(1);    opacity: 1; }
-        }
-        .card-in { animation: card-in 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; opacity: 0; }
-      `}</style>
-
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
       <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Ronda {round}</p>
-        <h2 className="mt-1 text-3xl font-black bg-gradient-to-r from-fuchsia-400 to-violet-400 bg-clip-text text-transparent">
+        <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Ronda {round}</p>
+        <h2 className="mt-1 font-display text-3xl font-bold bg-gradient-to-r from-qr-primary to-qr-cyan bg-clip-text text-transparent">
           Marcador
         </h2>
       </div>
@@ -31,19 +23,26 @@ export default function RoundSummary({ teams, round, onNext, onEnd }: Props) {
         {sorted.map((team, i) => (
           <div
             key={team.id}
-            className={`card-in flex items-center justify-between rounded-2xl px-5 py-4 ${
-              i === 0 ? 'border-2 border-amber-500/60 bg-zinc-900' : 'border border-zinc-800 bg-zinc-900'
+            className={`anim-card flex items-center justify-between rounded-[24px] px-5 py-4 ${
+              i === 0
+                ? 'border border-qr-primary/50 bg-qr-card/80 shadow-[0_0_20px_rgba(255,46,136,0.15)]'
+                : 'border border-white/10 bg-qr-card/60'
             }`}
             style={{ animationDelay: `${i * 75}ms` }}
           >
             <div className="flex items-center gap-3">
-              <span className="w-6 text-center text-sm font-black text-zinc-600">
+              <span className="w-6 text-center text-sm font-black text-qr-muted">
                 {i === 0 ? '👑' : `#${i + 1}`}
               </span>
               <span className="h-3 w-3 rounded-full" style={{ background: team.color }} />
-              <span className="font-bold text-white">{team.name}</span>
+              <span className="font-bold text-qr-text">{team.name}</span>
             </div>
-            <span className="text-2xl font-black text-amber-400">{team.score}</span>
+            <span
+              className="font-display text-2xl font-bold text-qr-yellow"
+              style={i === 0 ? { textShadow: '0 0 16px rgba(255,210,63,0.5)' } : undefined}
+            >
+              {team.score}
+            </span>
           </div>
         ))}
       </div>
@@ -51,13 +50,13 @@ export default function RoundSummary({ teams, round, onNext, onEnd }: Props) {
       <div className="flex w-full max-w-sm gap-2">
         <button
           onClick={onNext}
-          className="flex-1 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 py-4 text-base font-black text-white shadow-lg shadow-fuchsia-900/30 transition active:scale-95 hover:brightness-110"
+          className="flex-1 rounded-full bg-qr-primary py-4 text-base font-black text-qr-text shadow-[0_0_24px_rgba(255,46,136,0.45)] transition active:scale-95 hover:brightness-110"
         >
           Siguiente ronda →
         </button>
         <button
           onClick={onEnd}
-          className="rounded-2xl border border-zinc-800 px-4 py-4 text-sm text-zinc-500 transition hover:border-red-800 hover:text-red-400"
+          className="rounded-full border border-white/15 px-5 py-4 text-sm text-qr-muted transition hover:border-qr-red hover:text-qr-red"
         >
           Terminar
         </button>

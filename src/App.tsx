@@ -21,7 +21,6 @@ export default function App() {
   const [debugMode, setDebugMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [genreError, setGenreError] = useState<string | null>(null);
-
   const [confirmReset, setConfirmReset] = useState(false);
 
   const {
@@ -52,12 +51,9 @@ export default function App() {
   };
 
   if (!authed && !debugMode) return <Login />;
-
   if (!playerReady && !debugMode) {
     return (
-      <DevicePicker
-        onSelect={(id) => { selectDevice(id); setPlayerReady(true); }}
-      />
+      <DevicePicker onSelect={(id) => { selectDevice(id); setPlayerReady(true); }} />
     );
   }
 
@@ -66,22 +62,22 @@ export default function App() {
   const isSpeed = state.gameMode === 'speed';
 
   return (
-    <div className="relative min-h-screen bg-zinc-950 text-white">
+    <div className="relative min-h-screen text-qr-text">
       {/* Top bar */}
       {state.phase !== 'setup' && (
-        <div className="fixed left-0 right-0 top-0 z-40 border-b border-zinc-900 bg-zinc-950/95 backdrop-blur">
+        <div className="fixed left-0 right-0 top-0 z-40 border-b border-white/8 bg-qr-bg/90 backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 px-3 py-2">
             <div className="flex items-center gap-2 shrink-0">
-              <span className="bg-gradient-to-r from-fuchsia-400 to-violet-400 bg-clip-text text-sm font-black text-transparent">
+              <span className="font-display text-sm font-bold bg-gradient-to-r from-qr-primary to-qr-cyan bg-clip-text text-transparent">
                 Que Rolón
               </span>
               {isSpeed && (
-                <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-bold text-orange-400">⚡</span>
+                <span className="rounded-full bg-qr-yellow/20 px-2 py-0.5 text-[10px] font-bold text-qr-yellow">⚡</span>
               )}
               {debugMode && (
-                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">🛠 DEBUG</span>
+                <span className="rounded-full bg-qr-yellow/20 px-2 py-0.5 text-[10px] font-bold text-qr-yellow">🛠 DEBUG</span>
               )}
-              <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-bold text-zinc-400">
+              <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-qr-muted">
                 {state.round}/{state.maxRounds}
               </span>
             </div>
@@ -91,9 +87,7 @@ export default function App() {
                 return (
                   <span
                     key={t.id}
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-black transition ${
-                      isActive ? 'ring-1' : ''
-                    }`}
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-black transition ${isActive ? 'ring-1' : ''}`}
                     style={{
                       color: t.color,
                       background: isActive ? `${t.color}22` : 'transparent',
@@ -108,39 +102,41 @@ export default function App() {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => setConfirmReset(true)}
-                className="text-zinc-600 hover:text-red-400 transition px-1 text-sm"
-                aria-label="Reiniciar partida"
+                className="text-qr-muted/60 hover:text-qr-red transition px-1 text-sm"
               >
                 ✕
               </button>
-              <button
-                onClick={reconnectSpotify}
-                className="text-zinc-600 hover:text-green-400 transition px-1 text-sm"
-                title="Reconectar Spotify"
-              >
-                ↺
-              </button>
+              {!debugMode && (
+                <button
+                  onClick={reconnectSpotify}
+                  className="text-qr-muted/60 hover:text-qr-green transition px-1 text-sm"
+                  title="Reconectar Spotify"
+                >
+                  ↺
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
+      {/* Reset modal */}
       {confirmReset && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
-          <div className="w-full max-w-sm rounded-3xl border border-zinc-800 bg-zinc-900 p-6 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
+          <div className="w-full max-w-sm rounded-[28px] border border-white/10 bg-qr-card p-6 text-center shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
             <p className="text-3xl mb-3">⚠️</p>
-            <p className="text-lg font-black text-white mb-1">¿Reiniciar partida?</p>
-            <p className="text-sm text-zinc-400 mb-5">Se pierden todos los puntos.</p>
+            <p className="font-display text-lg font-bold text-qr-text mb-1">¿Reiniciar partida?</p>
+            <p className="text-sm text-qr-muted mb-5">Se pierden todos los puntos.</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setConfirmReset(false)}
-                className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 py-3 text-sm font-bold text-zinc-300 transition hover:border-zinc-600"
+                className="flex-1 rounded-full border border-white/15 py-3 text-sm font-bold text-qr-muted transition hover:border-white/30"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => { setConfirmReset(false); setDebugMode(false); resetGame(); }}
-                className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-black text-white transition hover:bg-red-500 active:scale-95"
+                className="flex-1 rounded-full bg-qr-red py-3 text-sm font-black text-qr-text transition hover:brightness-110 active:scale-95"
               >
                 Reiniciar
               </button>
@@ -167,23 +163,27 @@ export default function App() {
               gameMode={state.gameMode}
             />
             {loading && !genreError && (
-              <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-3 rounded-3xl border border-zinc-800 bg-zinc-900 px-8 py-6">
-                  <div className="h-10 w-10 rounded-full border-4 border-zinc-800 border-t-fuchsia-500 animate-spin" />
-                  <p className="text-sm font-bold text-zinc-300">Buscando canción...</p>
-                  <p className="text-xs text-zinc-500">Spotify a veces tarda</p>
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-md">
+                <div className="flex flex-col items-center gap-4 rounded-[28px] border border-white/10 bg-qr-card px-8 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+                  <div className="h-10 w-10 rounded-full border-4 border-white/10 border-t-qr-primary animate-spin" />
+                  <p className="text-sm font-bold text-qr-text">Buscando canción...</p>
+                  <div className="flex items-end gap-1">
+                    {[0, 0.1, 0.05, 0.15, 0.08].map((d, i) => (
+                      <div key={i} className="w-0.5 rounded-full eq-bar" style={{ height: '14px', background: 'linear-gradient(to top, #FF2E88, #22D3EE)', animationDelay: `${d}s` }} />
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
             {genreError && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
-                <div className="w-full max-w-sm rounded-3xl border border-red-800 bg-zinc-900 p-6 text-center">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
+                <div className="w-full max-w-sm rounded-[28px] border border-qr-red/40 bg-qr-card p-6 text-center">
                   <p className="text-3xl mb-3">⚠️</p>
-                  <p className="text-red-400 font-black text-lg mb-1">Error cargando canción</p>
-                  <p className="text-sm text-zinc-400 mb-5">{genreError}</p>
+                  <p className="font-display font-bold text-lg text-qr-red mb-1">Error cargando canción</p>
+                  <p className="text-sm text-qr-muted mb-5">{genreError}</p>
                   <button
                     onClick={() => setGenreError(null)}
-                    className="rounded-xl bg-zinc-800 px-6 py-3 text-sm font-bold transition hover:bg-zinc-700"
+                    className="rounded-full border border-white/15 px-6 py-3 text-sm font-bold text-qr-muted transition hover:border-white/30"
                   >
                     Intentar de nuevo
                   </button>
