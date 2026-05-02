@@ -31,7 +31,7 @@ export default function Setup({ onStart }: Props) {
         <img
           src="/logorolon2.png"
           alt="Que Rolón"
-          className="w-44 max-w-full select-none drop-shadow-[0_0_24px_rgba(255,46,136,0.35)]"
+          className="w-88 max-w-full select-none drop-shadow-[0_0_24px_rgba(255,46,136,0.35)]"
           draggable={false}
         />
         <p className="text-xs text-qr-muted">Nueva partida</p>

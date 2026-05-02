@@ -10,7 +10,7 @@ export default function Login() {
         <img
           src="/logorolon2.png"
           alt="Que Rolón"
-          className="w-72 max-w-full select-none drop-shadow-[0_0_40px_rgba(255,46,136,0.4)]"
+          className="w-[576px] max-w-full select-none drop-shadow-[0_0_40px_rgba(255,46,136,0.4)]"
           draggable={false}
         />
         {/* Equalizer bars */}
