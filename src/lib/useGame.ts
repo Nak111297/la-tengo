@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import type { GameState, Team, TrackInfo, GameMode } from '../types';
+import type { GameState, Team, TrackInfo, GameMode, SongSource } from '../types';
 import { TEAM_COLORS, SPEED_DURATION } from '../types';
 import { calculateScore, calculateSpeedScore } from './scoring';
 import { loadTracksForGenre, playSong, pauseSong } from './spotify-player';
@@ -18,6 +18,7 @@ const INITIAL_STATE: GameState = {
   noneScored: false,
   gameMode: 'knowledge',
   speedPoints: null,
+  songSource: 'advanced',
 };
 
 export function useGame() {
@@ -28,6 +29,7 @@ export function useGame() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameModeRef = useRef<GameMode>('knowledge');
+  const songSourceRef = useRef<SongSource>('advanced');
   const timeLeftRef = useRef(0);
   const stealModeRef = useRef(false);
 
@@ -64,7 +66,7 @@ export function useGame() {
     timerRef.current = setTimeout(onEnd, seconds * 1000);
   }, []);
 
-  const startGame = useCallback((teamNames: string[], maxRounds: number, gameMode: GameMode) => {
+  const startGame = useCallback((teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource) => {
     const teams: Team[] = teamNames.map((name, i) => ({
       id: `team-${i}`,
       name,
@@ -72,13 +74,14 @@ export function useGame() {
       score: 0,
     }));
     gameModeRef.current = gameMode;
-    update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1, maxRounds, gameMode });
+    songSourceRef.current = songSource;
+    update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1, maxRounds, gameMode, songSource });
   }, [update]);
 
   const selectGenre = useCallback(async (genre: string): Promise<string | null> => {
     clearTimers();
     try {
-      const tracks = await loadTracksForGenre(genre);
+      const tracks = await loadTracksForGenre(genre, songSourceRef.current);
       if (tracks.length === 0) return 'No se encontraron canciones para ese género.';
 
       const fresh = tracks.filter(t => !playedUrisRef.current.has(t.uri));
@@ -231,6 +234,7 @@ export function useGame() {
     clearTimers();
     playedUrisRef.current.clear();
     gameModeRef.current = 'knowledge';
+    songSourceRef.current = 'advanced';
     stealModeRef.current = false;
     setState(INITIAL_STATE);
   }, [clearTimers]);

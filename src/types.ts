@@ -6,6 +6,7 @@ export interface Team {
 }
 
 export type GameMode = 'knowledge' | 'speed';
+export type SongSource = 'random' | 'advanced';
 
 export interface GameState {
   teams: Team[];
@@ -21,6 +22,7 @@ export interface GameState {
   noneScored: boolean;
   gameMode: GameMode;
   speedPoints: number | null;
+  songSource: SongSource;
 }
 
 export type GamePhase =

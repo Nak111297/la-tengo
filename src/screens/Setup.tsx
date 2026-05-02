@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { TEAM_COLORS } from '../types';
-import type { GameMode } from '../types';
+import type { GameMode, SongSource } from '../types';
 
 interface Props {
-  onStart: (teamNames: string[], maxRounds: number, gameMode: GameMode) => void;
+  onStart: (teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource) => void;
 }
 
 const ROUND_OPTIONS = [5, 8, 10, 15, 20];
@@ -12,6 +12,7 @@ export default function Setup({ onStart }: Props) {
   const [teams, setTeams] = useState(['', '']);
   const [maxRounds, setMaxRounds] = useState(10);
   const [gameMode, setGameMode] = useState<GameMode>('knowledge');
+  const [songSource, setSongSource] = useState<SongSource>('advanced');
 
   const addTeam = () => {
     if (teams.length < 8) setTeams([...teams, '']);
@@ -61,6 +62,37 @@ export default function Setup({ onStart }: Props) {
             <span className="text-3xl">⚡</span>
             <span className="font-black">Speed</span>
             <span className="text-center text-xs text-zinc-500 leading-tight">Puntaje 100→0, más rápido más puntos</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Song source */}
+      <div className="w-full max-w-sm">
+        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-zinc-500">Origen de canciones</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setSongSource('random')}
+            className={`flex flex-col items-center gap-1 rounded-2xl border p-3 transition ${
+              songSource === 'random'
+                ? 'border-fuchsia-500 bg-fuchsia-500/10 text-white'
+                : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700'
+            }`}
+          >
+            <span className="text-2xl">🎲</span>
+            <span className="font-black text-sm">Random</span>
+            <span className="text-center text-[10px] text-zinc-500 leading-tight">Búsqueda libre por género</span>
+          </button>
+          <button
+            onClick={() => setSongSource('advanced')}
+            className={`flex flex-col items-center gap-1 rounded-2xl border p-3 transition ${
+              songSource === 'advanced'
+                ? 'border-fuchsia-500 bg-fuchsia-500/10 text-white'
+                : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700'
+            }`}
+          >
+            <span className="text-2xl">🎯</span>
+            <span className="font-black text-sm">Advanced</span>
+            <span className="text-center text-[10px] text-zinc-500 leading-tight">Artistas curados por género</span>
           </button>
         </div>
       </div>
@@ -122,7 +154,7 @@ export default function Setup({ onStart }: Props) {
       </div>
 
       <button
-        onClick={() => onStart(teams.map((t) => t.trim()), maxRounds, gameMode)}
+        onClick={() => onStart(teams.map((t) => t.trim()), maxRounds, gameMode, songSource)}
         disabled={!canStart}
         className="w-full max-w-sm rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 py-4 text-lg font-black text-white shadow-lg shadow-fuchsia-900/30 transition active:scale-95 hover:brightness-110 disabled:opacity-30 disabled:pointer-events-none"
       >

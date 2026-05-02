@@ -624,56 +624,112 @@ const GENRE_SONGS: Record<string, SongEntry[]> = {
   ],
 };
 
-async function findTrack(song: SongEntry, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
-  // Exact field-filter query — finds the specific song as it exists on Spotify
-  const q = `track:"${song.name}" artist:"${song.artist}"`;
+type SearchTrack = {
+  uri: string;
+  name: string;
+  artists: { name: string }[];
+  album: { name: string; images: { url: string }[]; release_date?: string };
+};
+
+const GENRE_ARTISTS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(GENRE_SONGS).map(([genre, songs]) => [
+    genre,
+    Array.from(new Set(songs.map(s => s.artist))),
+  ]),
+);
+
+async function spotifySearch(q: string, token: string): Promise<{ items: SearchTrack[]; error: string | null }> {
   try {
     const res = await fetch(
       `https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'track' })}`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
-    if (!res.ok) return { result: null, error: `http-${res.status}` };
+    if (!res.ok) return { items: [], error: `http-${res.status}` };
     const data = await res.json();
-    const items: Array<{
-      uri: string;
-      artists: { name: string }[];
-      album: { name: string; images: { url: string }[] };
-    }> = data.tracks?.items ?? [];
-    if (items.length === 0) return { result: null, error: 'no-items' };
-    const match = items[0];
-    return {
-      result: {
-        uri: match.uri,
-        name: song.name,
-        artist: song.artist,
-        album: match.album?.name ?? '',
-        albumArt: match.album?.images?.[0]?.url ?? '',
-        year: song.year,
-      },
-      error: null,
-    };
+    return { items: data.tracks?.items ?? [], error: null };
   } catch (e) {
-    return { result: null, error: e instanceof Error ? `exception-${e.message}` : 'exception' };
+    return { items: [], error: e instanceof Error ? `exception-${e.message}` : 'exception' };
   }
 }
 
-export async function loadTracksForGenre(genre: string): Promise<TrackInfo[]> {
+function trackInfoFrom(t: SearchTrack, fallbackYear?: number): TrackInfo {
+  const year = t.album?.release_date ? parseInt(t.album.release_date.slice(0, 4), 10) : (fallbackYear ?? 0);
+  return {
+    uri: t.uri,
+    name: t.name,
+    artist: t.artists[0]?.name ?? '',
+    album: t.album?.name ?? '',
+    albumArt: t.album?.images?.[0]?.url ?? '',
+    year: isNaN(year) ? 0 : year,
+  };
+}
+
+async function findTrackAdvanced(song: SongEntry, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
+  // Advanced: exact field-filter query for curated song
+  const q = `track:"${song.name}" artist:"${song.artist}"`;
+  const { items, error } = await spotifySearch(q, token);
+  if (error) return { result: null, error };
+  if (items.length === 0) return { result: null, error: 'no-items' };
+  const match = items[0];
+  return {
+    result: {
+      uri: match.uri,
+      name: song.name,
+      artist: song.artist,
+      album: match.album?.name ?? '',
+      albumArt: match.album?.images?.[0]?.url ?? '',
+      year: song.year,
+    },
+    error: null,
+  };
+}
+
+async function findTrackByArtist(artist: string, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
+  const q = `artist:"${artist}"`;
+  const { items, error } = await spotifySearch(q, token);
+  if (error) return { result: null, error };
+  if (items.length === 0) return { result: null, error: 'no-items' };
+  const pick = items[Math.floor(Math.random() * items.length)];
+  return { result: trackInfoFrom(pick), error: null };
+}
+
+async function findTrackByGenreKeyword(genre: string, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
+  const { items, error } = await spotifySearch(genre, token);
+  if (error) return { result: null, error };
+  if (items.length === 0) return { result: null, error: 'no-items' };
+  const pick = items[Math.floor(Math.random() * items.length)];
+  return { result: trackInfoFrom(pick), error: null };
+}
+
+export async function loadTracksForGenre(genre: string, songSource: 'random' | 'advanced' = 'advanced'): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
 
+  const rateLimitMsg = 'Límite de Spotify alcanzado. Espera unos segundos e intenta de nuevo.';
+
+  if (songSource === 'random') {
+    const { result, error } = await findTrackByGenreKeyword(genre, token);
+    if (result) return [result];
+    throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones para ${genre} (${error})`);
+  }
+
+  // advanced: pick random artist from curated list, then random track of that artist
+  const artists = GENRE_ARTISTS[genre];
+  if (artists && artists.length > 0) {
+    const artist = artists[Math.floor(Math.random() * artists.length)];
+    const { result, error } = await findTrackByArtist(artist, token);
+    if (result) return [result];
+    if (error === 'http-429') throw new Error(rateLimitMsg);
+    // fall through to curated song fallback
+  }
+
+  // fallback to curated exact song match
   const songs = GENRE_SONGS[genre];
   if (!songs) throw new Error(`Género no configurado: ${genre}`);
-
-  // Pick 1 random song — single search to stay well under dev-mode rate limits
   const song = shuffleArray([...songs])[0];
-  const { result, error } = await findTrack(song, token);
-
+  const { result, error } = await findTrackAdvanced(song, token);
   if (result) return [result];
-  throw new Error(
-    error === 'http-429'
-      ? 'Límite de Spotify alcanzado. Espera unos segundos e intenta de nuevo.'
-      : `No se encontró "${song.name}" (${error})`,
-  );
+  throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontró "${song.name}" (${error})`);
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
