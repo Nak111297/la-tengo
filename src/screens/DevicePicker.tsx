@@ -35,30 +35,40 @@ export default function DevicePicker({ onSelect }: Props) {
   useEffect(() => { refresh(); }, []);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-6">
-      <p className="text-3xl">🎵</p>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 bg-zinc-950">
       <div className="text-center">
-        <h2 className="text-xl font-black text-white">¿Dónde suena la música?</h2>
-        <p className="mt-1 text-sm text-zinc-400">Abre Spotify en el dispositivo que quieras usar y tócalo aquí</p>
+        <div className="mb-4 text-4xl">🔊</div>
+        <h2 className="text-2xl font-black text-white">¿Dónde suena la música?</h2>
+        <p className="mt-2 text-sm text-zinc-400">
+          Abrí Spotify en el dispositivo que vas a usar y tocalo aquí
+        </p>
       </div>
 
-      <div className="w-full max-w-sm space-y-3">
+      <div className="w-full max-w-sm space-y-2">
         {loading ? (
-          <p className="text-center text-zinc-500 animate-pulse">Buscando dispositivos...</p>
+          <div className="py-8 text-center text-zinc-500 animate-pulse text-sm">
+            Buscando dispositivos...
+          </div>
         ) : devices.length === 0 ? (
-          <p className="text-center text-zinc-500 text-sm">No se encontraron dispositivos.<br />Abre Spotify en tu teléfono o computadora.</p>
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-center text-sm text-zinc-500">
+            No se encontraron dispositivos.<br />
+            <span className="text-zinc-400">Abrí Spotify en tu celular o computadora.</span>
+          </div>
         ) : (
           devices.map(d => (
             <button
               key={d.id}
               onClick={() => onSelect(d.id)}
-              className="flex w-full items-center gap-4 rounded-2xl border border-zinc-700 bg-zinc-900 px-5 py-4 text-left transition hover:border-purple-500 active:scale-95"
+              className="flex w-full items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 px-5 py-4 text-left transition hover:border-fuchsia-500 hover:bg-zinc-800 active:scale-95"
             >
               <span className="text-2xl">{DEVICE_ICON[d.type] ?? '🔈'}</span>
-              <div>
-                <p className="font-bold text-white">{d.name}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-white truncate">{d.name}</p>
                 <p className="text-xs text-zinc-500">{d.type}{d.is_active ? ' · activo' : ''}</p>
               </div>
+              {d.is_active && (
+                <span className="h-2 w-2 rounded-full bg-green-400 shrink-0" />
+              )}
             </button>
           ))
         )}
@@ -66,7 +76,7 @@ export default function DevicePicker({ onSelect }: Props) {
 
       <button
         onClick={refresh}
-        className="rounded-xl border border-zinc-700 px-6 py-2 text-sm text-zinc-400 hover:text-white"
+        className="rounded-xl border border-zinc-800 px-6 py-2 text-sm text-zinc-500 transition hover:border-zinc-600 hover:text-white"
       >
         ↺ Actualizar lista
       </button>

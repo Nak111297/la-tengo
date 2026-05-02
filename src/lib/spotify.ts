@@ -1,5 +1,5 @@
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID || '';
-const REDIRECT_URI = 'https://la-tengo-jpha.vercel.app';
+const REDIRECT_URI = `${window.location.origin}`;
 const SCOPES = [
   'streaming',
   'user-read-email',

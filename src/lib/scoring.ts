@@ -17,10 +17,13 @@ export function calculateScore(
     if (gotSong) pts += 1;
     return pts;
   }
-
   const base = getBasePoints(betSeconds);
   let bonus = 0;
   if (gotArtist) bonus += 1;
   if (gotSong) bonus += 1;
   return base + bonus;
+}
+
+export function calculateSpeedScore(speedPoints: number, gotArtist: boolean): number {
+  return speedPoints + (gotArtist ? 100 : 0);
 }

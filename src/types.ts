@@ -5,6 +5,8 @@ export interface Team {
   score: number;
 }
 
+export type GameMode = 'knowledge' | 'speed';
+
 export interface GameState {
   teams: Team[];
   currentTeamIndex: number;
@@ -17,6 +19,8 @@ export interface GameState {
   stealMode: boolean;
   stealTeamIndex: number | null;
   noneScored: boolean;
+  gameMode: GameMode;
+  speedPoints: number | null;
 }
 
 export type GamePhase =
@@ -48,6 +52,8 @@ export const BET_OPTIONS = [
 
 export const STEAL_POINTS = 1;
 
+export const SPEED_DURATION = 60;
+
 export const GENRES = [
   'EDM',
   'Pop Latino',
@@ -61,6 +67,20 @@ export const GENRES = [
   '80s Hits',
   '90s Hits',
 ] as const;
+
+export const GENRE_ICONS: Record<string, string> = {
+  'EDM': '🎧',
+  'Pop Latino': '🌴',
+  'Reggaetón': '🔥',
+  'Rock en Español': '🎸',
+  'Pop Internacional': '⭐',
+  '2000s Hits': '💿',
+  'Fiesta / Party': '🎉',
+  'Hip Hop': '🎤',
+  'R&B': '🎵',
+  '80s Hits': '📼',
+  '90s Hits': '💾',
+};
 
 export const TEAM_COLORS = [
   '#ef4444', '#3b82f6', '#22c55e', '#f59e0b',

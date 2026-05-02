@@ -11,26 +11,30 @@ export default function RoundSummary({ teams, round, onNext, onEnd }: Props) {
   const sorted = [...teams].sort((a, b) => b.score - a.score);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 bg-zinc-950">
       <div className="text-center">
-        <p className="text-sm text-zinc-400">Después de la ronda {round}</p>
-        <h2 className="text-3xl font-black text-purple-500">Marcador</h2>
+        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Ronda {round}</p>
+        <h2 className="mt-1 text-3xl font-black bg-gradient-to-r from-fuchsia-400 to-violet-400 bg-clip-text text-transparent">
+          Marcador
+        </h2>
       </div>
 
       <div className="w-full max-w-sm space-y-2">
         {sorted.map((team, i) => (
           <div
             key={team.id}
-            className={`flex items-center justify-between rounded-xl p-4 ${
-              i === 0 ? 'border-2 border-amber-500 bg-zinc-900' : 'border border-zinc-800 bg-zinc-900'
+            className={`flex items-center justify-between rounded-2xl px-5 py-4 ${
+              i === 0 ? 'border-2 border-amber-500/60 bg-zinc-900' : 'border border-zinc-800 bg-zinc-900'
             }`}
           >
             <div className="flex items-center gap-3">
-              <span className="text-lg font-black text-zinc-500">#{i + 1}</span>
-              <span className="h-4 w-4 rounded-full" style={{ background: team.color }} />
-              <span className="font-bold">{i === 0 ? '👑 ' : ''}{team.name}</span>
+              <span className="w-6 text-center text-sm font-black text-zinc-600">
+                {i === 0 ? '👑' : `#${i + 1}`}
+              </span>
+              <span className="h-3 w-3 rounded-full" style={{ background: team.color }} />
+              <span className="font-bold text-white">{team.name}</span>
             </div>
-            <span className="text-xl font-black text-amber-400">{team.score}</span>
+            <span className="text-2xl font-black text-amber-400">{team.score}</span>
           </div>
         ))}
       </div>
@@ -38,13 +42,13 @@ export default function RoundSummary({ teams, round, onNext, onEnd }: Props) {
       <div className="flex w-full max-w-sm gap-2">
         <button
           onClick={onNext}
-          className="flex-1 rounded-2xl bg-purple-600 py-4 text-lg font-bold text-white transition hover:bg-purple-500"
+          className="flex-1 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 py-4 text-base font-black text-white shadow-lg shadow-fuchsia-900/30 transition active:scale-95 hover:brightness-110"
         >
-          Siguiente ronda
+          Siguiente ronda →
         </button>
         <button
           onClick={onEnd}
-          className="rounded-2xl border border-zinc-700 px-4 py-4 text-sm text-zinc-400 transition hover:border-red-500"
+          className="rounded-2xl border border-zinc-800 px-4 py-4 text-sm text-zinc-500 transition hover:border-red-800 hover:text-red-400"
         >
           Terminar
         </button>
