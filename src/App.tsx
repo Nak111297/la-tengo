@@ -21,6 +21,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [genreError, setGenreError] = useState<string | null>(null);
 
+  const [confirmReset, setConfirmReset] = useState(false);
+
   const {
     state, timeLeft,
     startGame, selectGenre, betAndPlay,
@@ -66,35 +68,79 @@ export default function App() {
     <div className="relative min-h-screen bg-zinc-950 text-white">
       {/* Top bar */}
       {state.phase !== 'setup' && (
-        <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-zinc-900 bg-zinc-950/95 px-4 py-2 backdrop-blur">
-          <span className="bg-gradient-to-r from-fuchsia-400 to-violet-400 bg-clip-text text-sm font-black text-transparent">
-            Que Rolón
-          </span>
-          <div className="flex items-center gap-3 text-xs">
-            {isSpeed && (
-              <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-xs font-bold text-orange-400">⚡ Speed</span>
-            )}
-            <span className="text-zinc-500">
-              {state.round}/{state.maxRounds}
-            </span>
-            {state.teams.map((t) => (
-              <span key={t.id} className="font-black" style={{ color: t.color }}>
-                {t.score}
+        <div className="fixed left-0 right-0 top-0 z-40 border-b border-zinc-900 bg-zinc-950/95 backdrop-blur">
+          <div className="flex items-center justify-between gap-2 px-3 py-2">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="bg-gradient-to-r from-fuchsia-400 to-violet-400 bg-clip-text text-sm font-black text-transparent">
+                Que Rolón
               </span>
-            ))}
-            <button
-              onClick={() => { if (confirm('¿Reiniciar partida?')) resetGame(); }}
-              className="text-zinc-600 hover:text-red-400 transition px-1"
-            >
-              ✕
-            </button>
-            <button
-              onClick={reconnectSpotify}
-              className="text-zinc-600 hover:text-green-400 transition px-1"
-              title="Reconectar Spotify"
-            >
-              ↺
-            </button>
+              {isSpeed && (
+                <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-bold text-orange-400">⚡</span>
+              )}
+              <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-bold text-zinc-400">
+                {state.round}/{state.maxRounds}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+              {state.teams.map((t, idx) => {
+                const isActive = idx === state.currentTeamIndex;
+                return (
+                  <span
+                    key={t.id}
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-black transition ${
+                      isActive ? 'ring-1' : ''
+                    }`}
+                    style={{
+                      color: t.color,
+                      background: isActive ? `${t.color}22` : 'transparent',
+                      boxShadow: isActive ? `0 0 0 1px ${t.color}66` : undefined,
+                    }}
+                  >
+                    {t.score}
+                  </span>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setConfirmReset(true)}
+                className="text-zinc-600 hover:text-red-400 transition px-1 text-sm"
+                aria-label="Reiniciar partida"
+              >
+                ✕
+              </button>
+              <button
+                onClick={reconnectSpotify}
+                className="text-zinc-600 hover:text-green-400 transition px-1 text-sm"
+                title="Reconectar Spotify"
+              >
+                ↺
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
+          <div className="w-full max-w-sm rounded-3xl border border-zinc-800 bg-zinc-900 p-6 text-center">
+            <p className="text-3xl mb-3">⚠️</p>
+            <p className="text-lg font-black text-white mb-1">¿Reiniciar partida?</p>
+            <p className="text-sm text-zinc-400 mb-5">Se pierden todos los puntos.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmReset(false)}
+                className="flex-1 rounded-xl border border-zinc-800 bg-zinc-900 py-3 text-sm font-bold text-zinc-300 transition hover:border-zinc-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => { setConfirmReset(false); resetGame(); }}
+                className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-black text-white transition hover:bg-red-500 active:scale-95"
+              >
+                Reiniciar
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -116,6 +162,15 @@ export default function App() {
               loading={loading}
               gameMode={state.gameMode}
             />
+            {loading && !genreError && (
+              <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-3 rounded-3xl border border-zinc-800 bg-zinc-900 px-8 py-6">
+                  <div className="h-10 w-10 rounded-full border-4 border-zinc-800 border-t-fuchsia-500 animate-spin" />
+                  <p className="text-sm font-bold text-zinc-300">Buscando canción...</p>
+                  <p className="text-xs text-zinc-500">Spotify a veces tarda</p>
+                </div>
+              </div>
+            )}
             {genreError && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
                 <div className="w-full max-w-sm rounded-3xl border border-red-800 bg-zinc-900 p-6 text-center">

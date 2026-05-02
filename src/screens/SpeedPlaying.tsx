@@ -50,7 +50,7 @@ export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip }
 
       <div className="flex items-center gap-2 text-sm text-zinc-500">
         <span className="animate-pulse text-orange-400">●</span>
-        Reproduciendo · {timeLeft.toFixed(1)}s
+        Reproduciendo
       </div>
 
       <button

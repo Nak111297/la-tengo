@@ -16,12 +16,16 @@ export default function Reveal({ track, noneScored, onCorrect, onWrong, onNoScor
       </p>
 
       <div className="w-full max-w-sm rounded-3xl border-2 border-amber-500/60 bg-zinc-900 p-6 shadow-xl shadow-amber-900/20">
-        {track.albumArt && (
+        {track.albumArt ? (
           <img
             src={track.albumArt}
             alt="Album art"
             className="mx-auto mb-4 h-40 w-40 rounded-2xl object-cover shadow-lg"
           />
+        ) : (
+          <div className="mx-auto mb-4 flex h-40 w-40 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-600 to-violet-700 text-5xl shadow-lg">
+            🎵
+          </div>
         )}
         <h2 className="text-2xl font-black text-white">{track.name}</h2>
         <p className="mt-1 text-lg text-zinc-300">{track.artist}</p>
