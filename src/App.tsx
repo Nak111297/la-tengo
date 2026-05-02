@@ -226,6 +226,7 @@ export default function App() {
             onSkip={skipSong}
             gameMode={state.gameMode}
             speedPoints={state.speedPoints}
+            teams={state.teams}
           />
         )}
 

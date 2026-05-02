@@ -22,6 +22,7 @@ export interface GameState {
   noneScored: boolean;
   gameMode: GameMode;
   speedPoints: number | null;
+  speedScoringTeamIndex: number | null;
   songSource: SongSource;
 }
 

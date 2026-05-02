@@ -41,6 +41,7 @@ const INITIAL_STATE: GameState = {
   noneScored: false,
   gameMode: 'knowledge',
   speedPoints: null,
+  speedScoringTeamIndex: null,
   songSource: 'advanced',
 };
 
@@ -175,8 +176,12 @@ export function useGame() {
     }
   }, [clearTimers, update]);
 
-  const playerGotIt = useCallback(() => {
-    update({ phase: 'reveal' });
+  const playerGotIt = useCallback((teamIdx?: number) => {
+    if (gameModeRef.current === 'speed' && teamIdx !== undefined) {
+      setState(prev => ({ ...prev, phase: 'reveal', speedScoringTeamIndex: teamIdx }));
+    } else {
+      update({ phase: 'reveal' });
+    }
   }, [update]);
 
   const markCorrect = useCallback(() => {
@@ -219,14 +224,16 @@ export function useGame() {
 
   const confirmCorrect = useCallback((gotArtist: boolean, gotSong: boolean) => {
     setState((prev) => {
-      const scoringTeamIdx = prev.stealMode ? (prev.stealTeamIndex ?? 0) : prev.currentTeamIndex;
+      const scoringTeamIdx = prev.gameMode === 'speed'
+        ? (prev.speedScoringTeamIndex ?? prev.currentTeamIndex)
+        : (prev.stealMode ? (prev.stealTeamIndex ?? 0) : prev.currentTeamIndex);
       const pts = prev.gameMode === 'speed'
         ? calculateSpeedScore(prev.speedPoints ?? 0, gotArtist)
         : calculateScore(prev.betSeconds || 30, gotArtist, gotSong, prev.stealMode);
       const teams = prev.teams.map((t, i) =>
         i === scoringTeamIdx ? { ...t, score: t.score + pts } : t,
       );
-      return { ...prev, teams, phase: 'round-summary', speedPoints: null };
+      return { ...prev, teams, phase: 'round-summary', speedPoints: null, speedScoringTeamIndex: null };
     });
   }, []);
 
@@ -235,13 +242,13 @@ export function useGame() {
     stealModeRef.current = false;
     setState((prev) => {
       const nextRoundNum = prev.round + 1;
+      const nextTeam = (prev.currentTeamIndex + 1) % prev.teams.length;
       if (nextRoundNum > prev.maxRounds) {
         return { ...prev, phase: 'finished', stealMode: false, stealTeamIndex: null, noneScored: false };
       }
       if (trackIndexRef.current >= tracksRef.current.length) {
-        return { ...prev, round: nextRoundNum, phase: 'genre-select', stealMode: false, stealTeamIndex: null, noneScored: false };
+        return { ...prev, currentTeamIndex: nextTeam, round: nextRoundNum, phase: 'genre-select', stealMode: false, stealTeamIndex: null, noneScored: false };
       }
-      const nextTeam = (prev.currentTeamIndex + 1) % prev.teams.length;
       const nextTrack = tracksRef.current[trackIndexRef.current];
       return {
         ...prev,

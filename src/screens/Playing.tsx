@@ -14,7 +14,6 @@ const EQ_DELAYS = [0, 0.15, 0.08, 0.22, 0.05];
 
 export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, stealTeam, onBuzzIn, onSkip }: Props) {
   const pct = Math.max(0, Math.min(100, (timeLeft / betSeconds) * 100));
-  const strokeLen = 276.5;
   const ringColor = stealMode ? '#FF4D4D' : '#22D3EE';
 
   return (
