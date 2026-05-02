@@ -27,12 +27,14 @@ export default function Setup({ onStart }: Props) {
 
   return (
     <div className="flex min-h-screen flex-col items-center gap-8 px-4 py-10">
-      <div className="text-center">
-        <span className="text-xs font-bold tracking-[0.35em] uppercase text-qr-muted">que</span>
-        <h1 className="font-display text-4xl font-bold bg-gradient-to-r from-qr-primary to-qr-cyan bg-clip-text text-transparent leading-tight">
-          ROLÓN
-        </h1>
-        <p className="mt-1 text-xs text-qr-muted">Nueva partida</p>
+      <div className="flex flex-col items-center gap-1">
+        <img
+          src="/logorolon.png"
+          alt="Que Rolón"
+          className="w-44 max-w-full select-none drop-shadow-[0_0_24px_rgba(255,46,136,0.35)]"
+          draggable={false}
+        />
+        <p className="text-xs text-qr-muted">Nueva partida</p>
       </div>
 
       {/* Mode selector */}

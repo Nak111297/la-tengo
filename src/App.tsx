@@ -68,9 +68,7 @@ export default function App() {
         <div className="fixed left-0 right-0 top-0 z-40 border-b border-white/8 bg-qr-bg/90 backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 px-3 py-2">
             <div className="flex items-center gap-2 shrink-0">
-              <span className="font-display text-sm font-bold bg-gradient-to-r from-qr-primary to-qr-cyan bg-clip-text text-transparent">
-                Que Rolón
-              </span>
+              <img src="/logorolon.png" alt="Que Rolón" className="h-6 w-auto" />
               {isSpeed && (
                 <span className="rounded-full bg-qr-yellow/20 px-2 py-0.5 text-[10px] font-bold text-qr-yellow">⚡</span>
               )}

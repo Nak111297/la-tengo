@@ -7,12 +7,14 @@ export default function Login() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-12 px-6 text-center">
       {/* Logo */}
       <div className="flex flex-col items-center">
-        <span className="text-xs font-bold tracking-[0.4em] uppercase text-qr-muted mb-1">que</span>
-        <h1 className="font-display text-[82px] leading-none font-bold bg-gradient-to-r from-qr-primary to-qr-cyan bg-clip-text text-transparent select-none">
-          ROLÓN
-        </h1>
+        <img
+          src="/logorolon.png"
+          alt="Que Rolón"
+          className="w-72 max-w-full select-none drop-shadow-[0_0_40px_rgba(255,46,136,0.4)]"
+          draggable={false}
+        />
         {/* Equalizer bars */}
-        <div className="mt-4 flex items-end gap-1">
+        <div className="mt-2 flex items-end gap-1">
           {EQ_HEIGHTS.map((_, i) => (
             <div
               key={i}
@@ -25,7 +27,7 @@ export default function Login() {
             />
           ))}
         </div>
-        <p className="mt-4 text-sm text-qr-muted">Adivina la canción antes que todos</p>
+        <p className="mt-3 text-sm text-qr-muted">Adivina la canción antes que todos</p>
       </div>
 
       <div className="flex flex-col items-center gap-3 w-full max-w-xs">
