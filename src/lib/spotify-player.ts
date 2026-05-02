@@ -631,19 +631,20 @@ type SearchTrack = {
   album: { name: string; images: { url: string }[]; release_date?: string };
 };
 
-const GENRE_ARTISTS: Record<string, string[]> = Object.fromEntries(
-  Object.entries(GENRE_SONGS).map(([genre, songs]) => [
-    genre,
-    Array.from(new Set(songs.map(s => s.artist))),
-  ]),
-);
-
-async function spotifySearch(q: string, token: string): Promise<{ items: SearchTrack[]; error: string | null }> {
+async function spotifySearch(q: string, token: string, retries = 1): Promise<{ items: SearchTrack[]; error: string | null }> {
   try {
     const res = await fetch(
       `https://api.spotify.com/v1/search?${new URLSearchParams({ q, type: 'track' })}`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
+    if (res.status === 429) {
+      if (retries > 0) {
+        const wait = Math.min(parseInt(res.headers.get('Retry-After') ?? '4', 10), 10) * 1000;
+        await new Promise(r => setTimeout(r, wait));
+        return spotifySearch(q, token, retries - 1);
+      }
+      return { items: [], error: 'http-429' };
+    }
     if (!res.ok) return { items: [], error: `http-${res.status}` };
     const data = await res.json();
     return { items: data.tracks?.items ?? [], error: null };
@@ -684,15 +685,6 @@ async function findTrackAdvanced(song: SongEntry, token: string): Promise<{ resu
   };
 }
 
-async function findTrackByArtist(artist: string, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
-  const q = `artist:"${artist}"`;
-  const { items, error } = await spotifySearch(q, token);
-  if (error) return { result: null, error };
-  if (items.length === 0) return { result: null, error: 'no-items' };
-  const pick = items[Math.floor(Math.random() * items.length)];
-  return { result: trackInfoFrom(pick), error: null };
-}
-
 async function findTrackByGenreKeyword(genre: string, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
   const { items, error } = await spotifySearch(genre, token);
   if (error) return { result: null, error };
@@ -713,23 +705,13 @@ export async function loadTracksForGenre(genre: string, songSource: 'random' | '
     throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones para ${genre} (${error})`);
   }
 
-  // advanced: pick random artist from curated list, then random track of that artist
-  const artists = GENRE_ARTISTS[genre];
-  if (artists && artists.length > 0) {
-    const artist = artists[Math.floor(Math.random() * artists.length)];
-    const { result, error } = await findTrackByArtist(artist, token);
-    if (result) return [result];
-    if (error === 'http-429') throw new Error(rateLimitMsg);
-    // fall through to curated song fallback
-  }
-
-  // fallback to curated exact song match
+  // advanced: 1 search — pick a random curated song and do exact title+artist match
   const songs = GENRE_SONGS[genre];
   if (!songs) throw new Error(`Género no configurado: ${genre}`);
   const song = shuffleArray([...songs])[0];
   const { result, error } = await findTrackAdvanced(song, token);
   if (result) return [result];
-  throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontró "${song.name}" (${error})`);
+  throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontró "${song.name}" de ${song.artist} (${error})`);
 }
 
 function shuffleArray<T>(arr: T[]): T[] {
