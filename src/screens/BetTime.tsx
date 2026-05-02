@@ -6,11 +6,11 @@ interface Props {
   onBet: (seconds: number) => void;
 }
 
-const BET_DESCRIPTIONS: Record<number, string> = {
-  3: 'Arriesgado',
-  5: 'Confiado',
-  10: 'Cauteloso',
-  30: 'Seguro',
+const BET_META: Record<number, { risk: string; color: string; barWidth: string }> = {
+  3:  { risk: 'Máximo riesgo', color: '#ef4444', barWidth: 'w-full' },
+  5:  { risk: 'Arriesgado',   color: '#f97316', barWidth: 'w-3/4' },
+  10: { risk: 'Cauteloso',    color: '#f59e0b', barWidth: 'w-1/2' },
+  30: { risk: 'Sin riesgo',   color: '#22c55e', barWidth: 'w-1/4' },
 };
 
 export default function BetTime({ currentTeam, onBet }: Props) {
@@ -29,22 +29,32 @@ export default function BetTime({ currentTeam, onBet }: Props) {
       </div>
 
       <div className="flex w-full max-w-sm flex-col gap-3">
-        {BET_OPTIONS.map((opt) => (
-          <button
-            key={opt.seconds}
-            onClick={() => onBet(opt.seconds)}
-            className="group flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-5 transition hover:border-violet-500 hover:bg-zinc-800 active:scale-95"
-          >
-            <div className="text-left">
-              <span className="block text-2xl font-black text-white">{opt.label}</span>
-              <span className="text-xs text-zinc-500">{BET_DESCRIPTIONS[opt.seconds]}</span>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className="text-2xl font-black text-amber-400">{opt.points}</span>
-              <span className="text-xs text-zinc-500">pts base</span>
-            </div>
-          </button>
-        ))}
+        {BET_OPTIONS.map((opt) => {
+          const meta = BET_META[opt.seconds];
+          return (
+            <button
+              key={opt.seconds}
+              onClick={() => onBet(opt.seconds)}
+              className="group relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-5 transition hover:border-zinc-600 hover:bg-zinc-800 active:scale-95"
+            >
+              {/* risk bar */}
+              <div
+                className={`absolute left-0 top-0 h-0.5 ${meta.barWidth} transition-all`}
+                style={{ background: meta.color }}
+              />
+              <div className="flex items-center justify-between">
+                <div className="text-left">
+                  <span className="block text-2xl font-black text-white">{opt.label}</span>
+                  <span className="text-xs font-bold" style={{ color: meta.color }}>{meta.risk}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-2xl font-black text-amber-400">{opt.points}</span>
+                  <span className="text-xs text-zinc-500">pts base</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

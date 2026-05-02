@@ -12,6 +12,14 @@ export default function RoundSummary({ teams, round, onNext, onEnd }: Props) {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 bg-zinc-950">
+      <style>{`
+        @keyframes card-in {
+          0%   { transform: translateY(18px) scale(0.96); opacity: 0; }
+          100% { transform: translateY(0)    scale(1);    opacity: 1; }
+        }
+        .card-in { animation: card-in 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) forwards; opacity: 0; }
+      `}</style>
+
       <div className="text-center">
         <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Ronda {round}</p>
         <h2 className="mt-1 text-3xl font-black bg-gradient-to-r from-fuchsia-400 to-violet-400 bg-clip-text text-transparent">
@@ -23,9 +31,10 @@ export default function RoundSummary({ teams, round, onNext, onEnd }: Props) {
         {sorted.map((team, i) => (
           <div
             key={team.id}
-            className={`flex items-center justify-between rounded-2xl px-5 py-4 ${
+            className={`card-in flex items-center justify-between rounded-2xl px-5 py-4 ${
               i === 0 ? 'border-2 border-amber-500/60 bg-zinc-900' : 'border border-zinc-800 bg-zinc-900'
             }`}
+            style={{ animationDelay: `${i * 75}ms` }}
           >
             <div className="flex items-center gap-3">
               <span className="w-6 text-center text-sm font-black text-zinc-600">

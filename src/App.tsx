@@ -18,6 +18,7 @@ import Finished from './screens/Finished';
 export default function App() {
   const [authed, setAuthed] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [genreError, setGenreError] = useState<string | null>(null);
 
@@ -50,9 +51,9 @@ export default function App() {
     redirectToSpotifyAuth();
   };
 
-  if (!authed) return <Login />;
+  if (!authed && !debugMode) return <Login />;
 
-  if (!playerReady) {
+  if (!playerReady && !debugMode) {
     return (
       <DevicePicker
         onSelect={(id) => { selectDevice(id); setPlayerReady(true); }}
@@ -76,6 +77,9 @@ export default function App() {
               </span>
               {isSpeed && (
                 <span className="rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-bold text-orange-400">⚡</span>
+              )}
+              {debugMode && (
+                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">🛠 DEBUG</span>
               )}
               <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-bold text-zinc-400">
                 {state.round}/{state.maxRounds}
@@ -135,7 +139,7 @@ export default function App() {
                 Cancelar
               </button>
               <button
-                onClick={() => { setConfirmReset(false); resetGame(); }}
+                onClick={() => { setConfirmReset(false); setDebugMode(false); resetGame(); }}
                 className="flex-1 rounded-xl bg-red-600 py-3 text-sm font-black text-white transition hover:bg-red-500 active:scale-95"
               >
                 Reiniciar
@@ -147,7 +151,7 @@ export default function App() {
 
       <div className={state.phase !== 'setup' ? 'pt-11' : ''}>
         {state.phase === 'setup' && (
-          <Setup onStart={startGame} />
+          <Setup onStart={(t, r, g, s, debug) => { setDebugMode(debug); startGame(t, r, g, s, debug); }} />
         )}
 
         {state.phase === 'finished' && (

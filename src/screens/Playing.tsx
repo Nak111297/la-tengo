@@ -69,7 +69,7 @@ export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, 
 
       <button
         onClick={onSkip}
-        className="text-sm text-zinc-600 transition hover:text-zinc-400"
+        className="rounded-2xl border border-zinc-800 px-8 py-3 text-sm font-bold text-zinc-400 transition hover:border-zinc-600 hover:text-white active:scale-95"
       >
         ⏭ Saltar canción
       </button>

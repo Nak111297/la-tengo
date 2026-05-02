@@ -12,6 +12,7 @@ export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip }
   const pct = Math.max(0, Math.min(100, (timeLeft / SPEED_DURATION) * 100));
   const currentScore = Math.round(pct);
   const strokeLen = 276.5;
+  const ringColor = `hsl(${pct * 0.3}, 90%, 55%)`;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 bg-zinc-950">
@@ -30,7 +31,7 @@ export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip }
           <circle
             cx="50" cy="50" r="44"
             fill="none"
-            stroke={pct > 50 ? '#f97316' : pct > 25 ? '#f59e0b' : '#ef4444'}
+            stroke={ringColor}
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={`${pct * (strokeLen / 100)} ${strokeLen}`}
@@ -39,8 +40,8 @@ export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip }
         </svg>
         <div className="text-center">
           <span
-            className="block text-6xl font-black font-mono tabular-nums"
-            style={{ color: pct > 50 ? '#f97316' : pct > 25 ? '#f59e0b' : '#ef4444' }}
+            className="block text-6xl font-black font-mono tabular-nums transition-colors duration-100"
+            style={{ color: ringColor }}
           >
             {currentScore}
           </span>
