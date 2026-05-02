@@ -29,7 +29,7 @@ export default function Setup({ onStart }: Props) {
     <div className="flex min-h-screen flex-col items-center gap-8 px-4 py-10">
       <div className="flex flex-col items-center gap-1">
         <img
-          src="/logorolon.png"
+          src="/logorolon2.png"
           alt="Que Rolón"
           className="w-44 max-w-full select-none drop-shadow-[0_0_24px_rgba(255,46,136,0.35)]"
           draggable={false}

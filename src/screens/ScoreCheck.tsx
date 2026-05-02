@@ -11,14 +11,17 @@ interface Props {
   onConfirm: (gotArtist: boolean, gotSong: boolean) => void;
   gameMode?: 'knowledge' | 'speed';
   speedPoints?: number | null;
+  speedScoringTeamIndex?: number | null;
 }
 
-export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, betSeconds, onConfirm, gameMode, speedPoints }: Props) {
+export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, betSeconds, onConfirm, gameMode, speedPoints, speedScoringTeamIndex }: Props) {
   const [gotArtist, setGotArtist] = useState(false);
   const [gotSong, setGotSong] = useState(false);
 
-  const scoringTeam = stealMode ? stealTeam : currentTeam;
   const isSpeed = gameMode === 'speed';
+  const scoringTeam = isSpeed && speedScoringTeamIndex != null
+    ? teams[speedScoringTeamIndex]
+    : (stealMode ? stealTeam : currentTeam);
   const preview = isSpeed
     ? calculateSpeedScore(speedPoints ?? 0, gotArtist)
     : calculateScore(betSeconds, gotArtist, gotSong, stealMode);
@@ -40,7 +43,7 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
 
         <ToggleOption
           label="🎤 Artista correcto"
-          sublabel={isSpeed ? '+100 pts' : '+1 bonus'}
+          sublabel={isSpeed ? '+10 pts' : '+1 bonus'}
           checked={gotArtist}
           onChange={setGotArtist}
         />

@@ -25,5 +25,5 @@ export function calculateScore(
 }
 
 export function calculateSpeedScore(speedPoints: number, gotArtist: boolean): number {
-  return speedPoints + (gotArtist ? 100 : 0);
+  return speedPoints + (gotArtist ? 10 : 0);
 }

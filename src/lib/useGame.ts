@@ -271,6 +271,10 @@ export function useGame() {
     nextRound();
   }, [clearTimers, nextRound]);
 
+  const finishGame = useCallback(() => {
+    setState(prev => ({ ...prev, phase: 'finished' }));
+  }, []);
+
   const resetGame = useCallback(() => {
     clearTimers();
     playedUrisRef.current.clear();
@@ -297,5 +301,6 @@ export function useGame() {
     nextRound,
     skipSong,
     resetGame,
+    finishGame,
   };
 }

@@ -27,7 +27,7 @@ export default function App() {
     state, timeLeft,
     startGame, selectGenre, betAndPlay,
     buzzIn, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
-    confirmCorrect, nextRound, skipSong, resetGame,
+    confirmCorrect, nextRound, skipSong, resetGame, finishGame,
   } = useGame();
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function App() {
         <div className="fixed left-0 right-0 top-0 z-40 border-b border-white/8 bg-qr-bg/90 backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 px-3 py-2">
             <div className="flex items-center gap-2 shrink-0">
-              <img src="/logorolon.png" alt="Que Rolón" className="h-6 w-auto" />
+              <img src="/logorolon2.png" alt="Que Rolón" className="h-6 w-auto" />
               {isSpeed && (
                 <span className="rounded-full bg-qr-yellow/20 px-2 py-0.5 text-[10px] font-bold text-qr-yellow">⚡</span>
               )}
@@ -250,6 +250,7 @@ export default function App() {
             onConfirm={confirmCorrect}
             gameMode={state.gameMode}
             speedPoints={state.speedPoints}
+            speedScoringTeamIndex={state.speedScoringTeamIndex}
           />
         )}
 
@@ -258,7 +259,7 @@ export default function App() {
             teams={state.teams}
             round={state.round}
             onNext={nextRound}
-            onEnd={resetGame}
+            onEnd={finishGame}
           />
         )}
       </div>
