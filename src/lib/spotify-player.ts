@@ -755,17 +755,32 @@ function shuffleArray<T>(arr: T[]): T[] {
 export async function playSong(trackUri: string): Promise<void> {
   const token = await getToken();
   if (!token || !deviceId) return;
-  // Wake/transfer device before playing — keeps mobile Spotify active between rounds
-  await fetch('https://api.spotify.com/v1/me/player', {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ device_ids: [deviceId], play: false }),
-  }).catch(() => {});
-  await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-    method: 'PUT',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uris: [trackUri], position_ms: 0 }),
-  });
+
+  const transfer = () =>
+    fetch('https://api.spotify.com/v1/me/player', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_ids: [deviceId], play: false }),
+    }).catch(() => {});
+
+  const play = () =>
+    fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uris: [trackUri], position_ms: 0 }),
+    });
+
+  // Wake the device and give mobile Spotify time to become active
+  await transfer();
+  await new Promise(r => setTimeout(r, 500));
+
+  // If device still not ready (404 = device gone inactive), re-transfer and retry once
+  const res = await play();
+  if (!res.ok && [404, 502, 503].includes(res.status)) {
+    await transfer();
+    await new Promise(r => setTimeout(r, 800));
+    await play();
+  }
 }
 
 export async function pauseSong(): Promise<void> {
