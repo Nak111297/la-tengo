@@ -756,30 +756,25 @@ export async function playSong(trackUri: string): Promise<void> {
   const token = await getToken();
   if (!token || !deviceId) return;
 
-  const transfer = () =>
-    fetch('https://api.spotify.com/v1/me/player', {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device_ids: [deviceId], play: false }),
-    }).catch(() => {});
-
-  const play = () =>
+  const doPlay = () =>
     fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ uris: [trackUri], position_ms: 0 }),
-    });
+    }).catch(() => null);
 
-  // Wake the device and give mobile Spotify time to become active
-  await transfer();
-  await new Promise(r => setTimeout(r, 500));
+  // Try direct play first — no delay when Spotify is already active
+  const res = await doPlay();
 
-  // If device still not ready (404 = device gone inactive), re-transfer and retry once
-  const res = await play();
-  if (!res.ok && [404, 502, 503].includes(res.status)) {
-    await transfer();
-    await new Promise(r => setTimeout(r, 800));
-    await play();
+  // If device went inactive (404/null), re-transfer ownership then retry
+  if (!res || !res.ok) {
+    await fetch('https://api.spotify.com/v1/me/player', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_ids: [deviceId], play: false }),
+    }).catch(() => {});
+    await new Promise(r => setTimeout(r, 600));
+    await doPlay();
   }
 }
 
