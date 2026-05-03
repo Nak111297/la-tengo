@@ -258,6 +258,7 @@ export default function App() {
           <RoundSummary
             teams={state.teams}
             round={state.round}
+            roundPoints={state.roundPoints}
             onNext={nextRound}
             onEnd={finishGame}
           />

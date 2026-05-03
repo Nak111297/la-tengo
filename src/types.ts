@@ -24,6 +24,7 @@ export interface GameState {
   speedPoints: number | null;
   speedScoringTeamIndex: number | null;
   songSource: SongSource;
+  roundPoints: Record<string, number>;
 }
 
 export type GamePhase =
@@ -64,6 +65,7 @@ export const GENRES = [
   'Rock en Español',
   'Pop Internacional',
   '2000s Hits',
+  '2010s Hits',
   'Fiesta / Party',
   'Hip Hop',
   'R&B',
@@ -78,6 +80,7 @@ export const GENRE_ICONS: Record<string, string> = {
   'Rock en Español': '🎸',
   'Pop Internacional': '⭐',
   '2000s Hits': '💿',
+  '2010s Hits': '📱',
   'Fiesta / Party': '🎉',
   'Hip Hop': '🎤',
   'R&B': '🎵',

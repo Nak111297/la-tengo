@@ -43,6 +43,7 @@ const INITIAL_STATE: GameState = {
   speedPoints: null,
   speedScoringTeamIndex: null,
   songSource: 'advanced',
+  roundPoints: {},
 };
 
 export function useGame() {
@@ -226,7 +227,7 @@ export function useGame() {
   }, [clearTimers, startCountdown]);
 
   const noScoreRound = useCallback(() => {
-    setState((prev) => ({ ...prev, phase: 'round-summary', noneScored: false }));
+    setState((prev) => ({ ...prev, phase: 'round-summary', noneScored: false, roundPoints: {} }));
   }, []);
 
   const confirmCorrect = useCallback((gotArtist: boolean, gotSong: boolean) => {
@@ -237,10 +238,12 @@ export function useGame() {
       const pts = prev.gameMode === 'speed'
         ? calculateSpeedScore(prev.speedPoints ?? 0, gotArtist)
         : calculateScore(prev.betSeconds || 30, gotArtist, gotSong, prev.stealMode);
+      const scoringTeam = prev.teams[scoringTeamIdx];
       const teams = prev.teams.map((t, i) =>
         i === scoringTeamIdx ? { ...t, score: t.score + pts } : t,
       );
-      return { ...prev, teams, phase: 'round-summary', speedPoints: null, speedScoringTeamIndex: null };
+      const roundPoints = scoringTeam ? { [scoringTeam.id]: pts } : {};
+      return { ...prev, teams, phase: 'round-summary', speedPoints: null, speedScoringTeamIndex: null, roundPoints };
     });
   }, []);
 
