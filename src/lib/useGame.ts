@@ -133,8 +133,8 @@ export function useGame() {
           currentTrackUri: pool[0].uri,
         });
         if (!debugModeRef.current) await playSong(pool[0].uri);
-        startCountdown(SPEED_DURATION, async () => {
-          if (!debugModeRef.current) await pauseSong();
+        startCountdown(SPEED_DURATION, () => {
+          // Speed mode: don't pause — let the song keep playing until the next one starts
           clearTimers();
           setState(prev => ({ ...prev, phase: 'reveal', speedPoints: 0, noneScored: true }));
         });
@@ -166,7 +166,9 @@ export function useGame() {
   }, [update, clearTimers, startCountdown]);
 
   const buzzIn = useCallback(async () => {
-    if (!debugModeRef.current) await pauseSong();
+    // Knowledge: pause so the team states their answer in silence
+    // Speed: keep playing — music continues through team picker and reveal
+    if (!debugModeRef.current && gameModeRef.current !== 'speed') await pauseSong();
     clearTimers();
     if (gameModeRef.current === 'speed') {
       const pts = Math.round((timeLeftRef.current / SPEED_DURATION) * 100);
@@ -186,6 +188,11 @@ export function useGame() {
 
   const markCorrect = useCallback(() => {
     update({ phase: 'score-artist' });
+    // Knowledge mode: replay the song so there's background music during score check
+    if (!debugModeRef.current && gameModeRef.current === 'knowledge') {
+      const track = tracksRef.current[trackIndexRef.current];
+      if (track) playSong(track.uri).catch(() => {});
+    }
   }, [update]);
 
   const playerDidNotGetIt = useCallback(() => {
@@ -265,8 +272,8 @@ export function useGame() {
     });
   }, []);
 
-  const skipSong = useCallback(async () => {
-    if (!debugModeRef.current) await pauseSong();
+  const skipSong = useCallback(() => {
+    // Don't pause — the next song's playSong call takes over automatically
     clearTimers();
     nextRound();
   }, [clearTimers, nextRound]);
