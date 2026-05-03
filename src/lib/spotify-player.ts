@@ -684,6 +684,17 @@ const GENRE_SONGS: Record<string, SongEntry[]> = {
 };
 
 // ---------------------------------------------------------------------------
+// Curated playlists — random mode pulls a random track from these directly
+// (one API call per genre selection, no search needed)
+// ---------------------------------------------------------------------------
+
+const GENRE_PLAYLISTS: Record<string, string> = {
+  'EDM': '6i1wd59WRuS7xSULXejHb4',
+  // Add more genres here as playlists are created:
+  // 'Pop Latino': 'PLAYLIST_ID',
+};
+
+// ---------------------------------------------------------------------------
 // Track URI cache — avoids re-searching songs already found this browser
 // ---------------------------------------------------------------------------
 
@@ -778,6 +789,37 @@ async function findTrackByGenreKeyword(genre: string, token: string): Promise<{ 
   return { result: trackInfoFrom(pick), error: null };
 }
 
+// Single call to a curated playlist → random track from up to 100 items
+async function findTrackFromPlaylist(
+  playlistId: string,
+  token: string,
+): Promise<{ result: TrackInfo | null; error: string | null }> {
+  try {
+    const url =
+      `https://api.spotify.com/v1/playlists/${playlistId}/tracks?` +
+      new URLSearchParams({
+        fields: 'items(track(uri,name,artists,album,is_local))',
+        limit: '100',
+      });
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 429) return { result: null, error: 'http-429' };
+    if (!res.ok) return { result: null, error: `http-${res.status}` };
+    const data = await res.json();
+    type PlaylistTrack = SearchTrack & { is_local?: boolean };
+    const items: Array<{ track: PlaylistTrack | null }> = data.items ?? [];
+    const valid = items
+      .map((i) => i.track)
+      .filter((t): t is SearchTrack =>
+        !!t && !t.is_local && typeof t.uri === 'string' && t.uri.startsWith('spotify:track:'),
+      );
+    if (valid.length === 0) return { result: null, error: 'no-items' };
+    const pick = valid[Math.floor(Math.random() * valid.length)];
+    return { result: trackInfoFrom(pick), error: null };
+  } catch (e) {
+    return { result: null, error: e instanceof Error ? `exception-${e.message}` : 'exception' };
+  }
+}
+
 export async function loadTracksForGenre(genre: string, songSource: 'random' | 'advanced' = 'advanced'): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
@@ -785,6 +827,14 @@ export async function loadTracksForGenre(genre: string, songSource: 'random' | '
   const rateLimitMsg = 'Límite de Spotify alcanzado. Espera unos segundos e intenta de nuevo.';
 
   if (songSource === 'random') {
+    // Use the curated playlist for this genre if one is configured
+    const playlistId = GENRE_PLAYLISTS[genre];
+    if (playlistId) {
+      const { result, error } = await findTrackFromPlaylist(playlistId, token);
+      if (result) return [result];
+      throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones en el playlist de ${genre} (${error})`);
+    }
+    // Fallback for genres without a playlist: keyword search
     const { result, error } = await findTrackByGenreKeyword(genre, token);
     if (result) return [result];
     throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones para ${genre} (${error})`);
