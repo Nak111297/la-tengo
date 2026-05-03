@@ -8,7 +8,7 @@ export function getBasePoints(betSeconds: number): number {
 export function calculateScore(
   betSeconds: number,
   gotArtist: boolean,
-  gotSong: boolean,   // kept for API compatibility — no longer grants bonus
+  _gotSong: boolean,  // kept for API compatibility — no longer grants bonus
   isSteal: boolean,
 ): number {
   if (isSteal) {
