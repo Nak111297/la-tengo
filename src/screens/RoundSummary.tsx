@@ -21,9 +21,16 @@ interface RowData {
 
 function TeamRow({ row, idx }: { row: RowData; idx: number }) {
   const [displayScore, setDisplayScore] = useState(row.prevScore);
+  // Start with card-in entry; swap to leader-glow AFTER entry animation completes.
+  // We cannot apply both classes simultaneously — they both set the `animation`
+  // property and whichever comes last in the stylesheet wins, leaving the card
+  // stuck at opacity:0 from anim-card's static style.
+  const [glowing, setGlowing] = useState(false);
+  const [showLeaderBadge, setShowLeaderBadge] = useState(false);
   const rafRef = useRef(0);
 
   useEffect(() => {
+    // Count-up animation
     if (row.gained === 0) {
       setDisplayScore(row.team.score);
       return;
@@ -39,9 +46,7 @@ function TeamRow({ row, idx }: { row: RowData; idx: number }) {
       const t = Math.min((ts - startTs) / DURATION, 1);
       const eased = 1 - Math.pow(1 - t, 3); // cubic ease-out
       setDisplayScore(Math.round(from + (to - from) * eased));
-      if (t < 1) {
-        rafRef.current = requestAnimationFrame(animate);
-      }
+      if (t < 1) rafRef.current = requestAnimationFrame(animate);
     };
 
     const timeout = setTimeout(() => {
@@ -55,16 +60,32 @@ function TeamRow({ row, idx }: { row: RowData; idx: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!row.isNewLeader) return;
+    // Switch from anim-card to leader-glow once the card-in animation finishes
+    const glowTimer = setTimeout(() => setGlowing(true), idx * 75 + 420);
+    // Show badge after the count-up settles (~1550 ms)
+    const badgeTimer = setTimeout(() => setShowLeaderBadge(true), 1550);
+    return () => {
+      clearTimeout(glowTimer);
+      clearTimeout(badgeTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isLeader = row.rank === 0;
+  // Use exactly one animation class at a time to avoid the CSS `animation`
+  // property conflict described above.
+  const animClass = glowing ? 'leader-glow' : 'anim-card';
 
   return (
     <div
-      className={`anim-card relative flex items-center justify-between rounded-[24px] px-5 py-4 ${
+      className={`${animClass} relative flex items-center justify-between rounded-[24px] px-5 py-4 ${
         isLeader
-          ? `border border-qr-primary/50 bg-qr-card/80 shadow-[0_0_20px_rgba(255,46,136,0.15)] ${row.isNewLeader ? 'leader-glow' : ''}`
+          ? 'border border-qr-primary/50 bg-qr-card/80 shadow-[0_0_20px_rgba(255,46,136,0.15)]'
           : 'border border-white/10 bg-qr-card/60'
       }`}
-      style={{ animationDelay: `${idx * 75}ms` }}
+      style={glowing ? undefined : { animationDelay: `${idx * 75}ms` }}
     >
       {/* Left side */}
       <div className="flex items-center gap-3 min-w-0">
@@ -73,11 +94,10 @@ function TeamRow({ row, idx }: { row: RowData; idx: number }) {
         </span>
         <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: row.team.color }} />
         <span className="font-bold text-qr-text truncate">{row.team.name}</span>
-        {row.isNewLeader && (
-          <span
-            className="new-leader-in shrink-0 rounded-full bg-qr-yellow/20 px-2 py-0.5 text-[10px] font-black text-qr-yellow"
-            style={{ animationDelay: '1550ms' }}
-          >
+        {/* Mount badge via state so new-leader-in fires immediately on mount,
+            no CSS animation-delay needed (which was being overridden by the shorthand). */}
+        {showLeaderBadge && (
+          <span className="new-leader-in shrink-0 rounded-full bg-qr-yellow/20 px-2 py-0.5 text-[10px] font-black text-qr-yellow">
             ¡Nuevo Líder!
           </span>
         )}
