@@ -24,9 +24,9 @@ export default function App() {
   const [confirmReset, setConfirmReset] = useState(false);
 
   const {
-    state, timeLeft,
+    state, timeLeft, canReplay,
     startGame, selectGenre, betAndPlay,
-    buzzIn, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
+    buzzIn, replaySong, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
     confirmCorrect, nextRound, skipSong, resetGame, finishGame,
   } = useGame();
 
@@ -227,6 +227,10 @@ export default function App() {
             gameMode={state.gameMode}
             speedPoints={state.speedPoints}
             teams={state.teams}
+            timeLeft={timeLeft}
+            canReplay={canReplay}
+            onReplay={replaySong}
+            speedEliminatedTeams={state.speedEliminatedTeams}
           />
         )}
 

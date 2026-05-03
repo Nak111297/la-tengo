@@ -10,11 +10,28 @@ interface Props {
   gameMode?: 'knowledge' | 'speed';
   speedPoints?: number | null;
   teams?: Team[];
+  // Knowledge mode extras
+  timeLeft?: number;
+  canReplay?: boolean;
+  onReplay?: () => void;
+  // Speed mode extras
+  speedEliminatedTeams?: number[];
 }
 
-export default function GuessPrompt({ currentTeam, stealMode, stealTeam, onGotIt, onDidNotGetIt, onSkip, gameMode, speedPoints, teams }: Props) {
+export default function GuessPrompt({
+  currentTeam, stealMode, stealTeam, onGotIt, onDidNotGetIt, onSkip,
+  gameMode, speedPoints, teams,
+  timeLeft, canReplay, onReplay,
+  speedEliminatedTeams,
+}: Props) {
   const team = stealMode ? stealTeam : currentTeam;
   const isSpeed = gameMode === 'speed';
+
+  // Timer color: green → yellow → red
+  const timerColor =
+    (timeLeft ?? 30) <= 7 ? '#FF4D4D' :
+    (timeLeft ?? 30) <= 15 ? '#FFD23F' :
+    '#22D3EE';
 
   if (isSpeed) {
     return (
@@ -29,21 +46,28 @@ export default function GuessPrompt({ currentTeam, stealMode, stealTeam, onGotIt
 
         <div className="w-full max-w-sm flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
-            {teams?.map((t, i) => (
-              <button
-                key={t.id}
-                onClick={() => onGotIt(i)}
-                className="rounded-[20px] border-2 py-5 text-base font-black transition active:scale-95 hover:brightness-110"
-                style={{
-                  borderColor: t.color,
-                  background: `${t.color}22`,
-                  color: t.color,
-                  boxShadow: `0 0 16px ${t.color}44`,
-                }}
-              >
-                {t.name}
-              </button>
-            ))}
+            {teams?.map((t, i) => {
+              const eliminated = speedEliminatedTeams?.includes(i) ?? false;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => onGotIt(i)}
+                  disabled={eliminated}
+                  className={`rounded-[20px] border-2 py-5 text-base font-black transition active:scale-95 ${
+                    eliminated ? 'opacity-35 cursor-not-allowed' : 'hover:brightness-110'
+                  }`}
+                  style={{
+                    borderColor: t.color,
+                    background: `${t.color}22`,
+                    color: t.color,
+                    boxShadow: eliminated ? 'none' : `0 0 16px ${t.color}44`,
+                  }}
+                >
+                  {t.name}
+                  {eliminated && <span className="block text-xs font-normal opacity-70">ya intentó</span>}
+                </button>
+              );
+            })}
           </div>
 
           <button
@@ -75,6 +99,20 @@ export default function GuessPrompt({ currentTeam, stealMode, stealTeam, onGotIt
         <h2 className="font-display text-3xl font-bold" style={{ color: team?.color }}>
           {team?.name}
         </h2>
+
+        {/* 30-second guess timer */}
+        {timeLeft !== undefined && (
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <span
+              className="font-display text-4xl font-black tabular-nums transition-colors duration-300"
+              style={{ color: timerColor, textShadow: `0 0 16px ${timerColor}60` }}
+            >
+              {Math.ceil(timeLeft)}
+            </span>
+            <span className="text-sm text-qr-muted">seg</span>
+          </div>
+        )}
+
         <p className="mt-2 text-lg text-qr-text/80">⏱ ¡Tiempo! ¿La tienen?</p>
       </div>
 
@@ -96,6 +134,15 @@ export default function GuessPrompt({ currentTeam, stealMode, stealTeam, onGotIt
         >
           ❌ No la tengo
         </button>
+
+        {canReplay && onReplay && !stealMode && (
+          <button
+            onClick={onReplay}
+            className="rounded-full border border-qr-cyan/40 py-3 text-sm font-bold text-qr-cyan transition hover:border-qr-cyan hover:bg-qr-cyan/10 active:scale-95"
+          >
+            ↺ Escuchar de nuevo
+          </button>
+        )}
 
         <button
           onClick={onSkip}

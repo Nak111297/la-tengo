@@ -8,20 +8,14 @@ export function getBasePoints(betSeconds: number): number {
 export function calculateScore(
   betSeconds: number,
   gotArtist: boolean,
-  gotSong: boolean,
+  gotSong: boolean,   // kept for API compatibility — no longer grants bonus
   isSteal: boolean,
 ): number {
   if (isSteal) {
-    let pts = STEAL_POINTS;
-    if (gotArtist) pts += 1;
-    if (gotSong) pts += 1;
-    return pts;
+    return STEAL_POINTS + (gotArtist ? 1 : 0);
   }
   const base = getBasePoints(betSeconds);
-  let bonus = 0;
-  if (gotArtist) bonus += 1;
-  if (gotSong) bonus += 1;
-  return base + bonus;
+  return base + (gotArtist ? 1 : 0);
 }
 
 export function calculateSpeedScore(speedPoints: number, gotArtist: boolean): number {

@@ -16,7 +16,6 @@ interface Props {
 
 export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, betSeconds, onConfirm, gameMode, speedPoints, speedScoringTeamIndex }: Props) {
   const [gotArtist, setGotArtist] = useState(false);
-  const [gotSong, setGotSong] = useState(false);
 
   const isSpeed = gameMode === 'speed';
   const scoringTeam = isSpeed && speedScoringTeamIndex != null
@@ -24,7 +23,7 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
     : (stealMode ? stealTeam : currentTeam);
   const preview = isSpeed
     ? calculateSpeedScore(speedPoints ?? 0, gotArtist)
-    : calculateScore(betSeconds, gotArtist, gotSong, stealMode);
+    : calculateScore(betSeconds, gotArtist, false, stealMode);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
@@ -48,14 +47,6 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
           onChange={setGotArtist}
         />
 
-        {!isSpeed && (
-          <ToggleOption
-            label="🎵 Nombre de la canción correcto"
-            sublabel="+1 bonus"
-            checked={gotSong}
-            onChange={setGotSong}
-          />
-        )}
       </div>
 
       <div className="text-center">
@@ -67,7 +58,7 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
       </div>
 
       <button
-        onClick={() => onConfirm(gotArtist, gotSong)}
+        onClick={() => onConfirm(gotArtist, false)}
         className="w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
       >
         Confirmar puntos

@@ -23,6 +23,7 @@ export interface GameState {
   gameMode: GameMode;
   speedPoints: number | null;
   speedScoringTeamIndex: number | null;
+  speedEliminatedTeams: number[];
   songSource: SongSource;
   roundPoints: Record<string, number>;
 }

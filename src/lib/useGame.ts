@@ -43,6 +43,7 @@ const INITIAL_STATE: GameState = {
   speedPoints: null,
   speedScoringTeamIndex: null,
   songSource: 'advanced',
+  speedEliminatedTeams: [],
   roundPoints: {},
 };
 
@@ -58,9 +59,13 @@ export function useGame() {
   const timeLeftRef = useRef(0);
   const stealModeRef = useRef(false);
   const debugModeRef = useRef(false);
+  const betSecondsRef = useRef(30);
+  const savedSpeedTimeRef = useRef(0);
+  const playerDidNotGetItRef = useRef<() => void>(() => {});
 
   const [timerRunning, setTimerRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [canReplay, setCanReplay] = useState(false);
 
   const update = useCallback((partial: Partial<GameState>) => {
     setState((prev) => ({ ...prev, ...partial }));
@@ -132,6 +137,7 @@ export function useGame() {
           betSeconds: SPEED_DURATION,
           currentTrack: pool[0],
           currentTrackUri: pool[0].uri,
+          speedEliminatedTeams: [],
         });
         if (!debugModeRef.current) await playSong(pool[0].uri);
         startCountdown(SPEED_DURATION, () => {
@@ -156,28 +162,62 @@ export function useGame() {
   const betAndPlay = useCallback(async (seconds: number) => {
     const track = tracksRef.current[trackIndexRef.current];
     if (!track) return;
+    betSecondsRef.current = seconds;
     playedUrisRef.current.add(track.uri);
     update({ betSeconds: seconds, phase: 'playing' });
     if (!debugModeRef.current) await playSong(track.uri);
     startCountdown(seconds, async () => {
       if (!debugModeRef.current) await pauseSong();
       clearTimers();
+      setCanReplay(true);
       update({ phase: 'guess-prompt' });
+      // 30-second auto-fail timer for knowledge mode
+      startCountdown(30, () => {
+        clearTimers();
+        playerDidNotGetItRef.current();
+      });
     });
   }, [update, clearTimers, startCountdown]);
 
   const buzzIn = useCallback(async () => {
-    // Knowledge: pause so the team states their answer in silence
-    // Speed: keep playing — music continues through team picker and reveal
     if (!debugModeRef.current && gameModeRef.current !== 'speed') await pauseSong();
+    // Save remaining time before clearing — needed to resume speed countdown on wrong guess
+    if (gameModeRef.current === 'speed') {
+      savedSpeedTimeRef.current = timeLeftRef.current;
+    }
     clearTimers();
     if (gameModeRef.current === 'speed') {
       const pts = Math.round((timeLeftRef.current / SPEED_DURATION) * 100);
       setState(prev => ({ ...prev, phase: 'guess-prompt', speedPoints: pts }));
     } else {
+      // Knowledge: go to guess-prompt, enable replay, start 30s auto-fail timer
+      if (!stealModeRef.current) setCanReplay(true);
       update({ phase: 'guess-prompt' });
+      startCountdown(30, () => {
+        clearTimers();
+        playerDidNotGetItRef.current();
+      });
     }
-  }, [clearTimers, update]);
+  }, [clearTimers, update, startCountdown]);
+
+  const replaySong = useCallback(async () => {
+    setCanReplay(false);
+    clearTimers();
+    const track = tracksRef.current[trackIndexRef.current];
+    if (!track) return;
+    update({ phase: 'playing' });
+    if (!debugModeRef.current) await playSong(track.uri);
+    startCountdown(betSecondsRef.current, async () => {
+      if (!debugModeRef.current) await pauseSong();
+      clearTimers();
+      setCanReplay(false); // replay already used
+      update({ phase: 'guess-prompt' });
+      startCountdown(30, () => {
+        clearTimers();
+        playerDidNotGetItRef.current();
+      });
+    });
+  }, [clearTimers, startCountdown, update]);
 
   const playerGotIt = useCallback((teamIdx?: number) => {
     if (gameModeRef.current === 'speed' && teamIdx !== undefined) {
@@ -197,37 +237,100 @@ export function useGame() {
   }, [update]);
 
   const playerDidNotGetIt = useCallback(() => {
+    // ── Speed mode ───────────────────────────────────────────────────────────
     if (gameModeRef.current === 'speed') {
-      setState(prev => ({ ...prev, phase: 'reveal', noneScored: true }));
+      const remaining = savedSpeedTimeRef.current;
+      let willResume = false;
+
+      setState((prev) => {
+        const elimIdx = prev.speedScoringTeamIndex;
+        // "Nadie adivinó" (no team selected) → go straight to reveal
+        if (elimIdx === null) {
+          return { ...prev, phase: 'reveal', noneScored: true, speedPoints: null };
+        }
+        const newEliminated = [...prev.speedEliminatedTeams, elimIdx];
+        const done = remaining <= 0.5 || newEliminated.length >= prev.teams.length;
+        if (done) {
+          willResume = false;
+          return {
+            ...prev,
+            phase: 'reveal',
+            noneScored: true,
+            speedScoringTeamIndex: null,
+            speedPoints: null,
+            speedEliminatedTeams: [],
+          };
+        }
+        willResume = true;
+        return {
+          ...prev,
+          phase: 'playing',
+          speedScoringTeamIndex: null,
+          speedPoints: null,
+          speedEliminatedTeams: newEliminated,
+        };
+      });
+
+      if (willResume) {
+        startCountdown(remaining, () => {
+          clearTimers();
+          setState((prev) => ({ ...prev, phase: 'reveal', noneScored: true, speedEliminatedTeams: [] }));
+        });
+      }
       return;
     }
+
+    // ── Knowledge mode ────────────────────────────────────────────────────────
+    // Capture steal state BEFORE setState so we know which branch fired
+    const wasInStealMode = stealModeRef.current;
+
     setState((prev) => {
       if (prev.stealMode) {
+        // Steal attempt failed → reveal with no score
         return { ...prev, phase: 'reveal', stealMode: false, stealTeamIndex: null, noneScored: true };
       }
+      // Main team failed → enter steal mode
       const stealIdx = (prev.currentTeamIndex + 1) % prev.teams.length;
-      stealModeRef.current = true;
       return { ...prev, stealMode: true, stealTeamIndex: stealIdx, phase: 'playing', betSeconds: 30 };
     });
 
-    if (!stealModeRef.current) {
+    if (!wasInStealMode) {
+      // Just entered steal mode: play song for 30s listening, then 30s guess timer
+      stealModeRef.current = true;
+      setCanReplay(false); // steal team gets no replay
       const track = tracksRef.current[trackIndexRef.current];
       if (track) {
-        stealModeRef.current = true;
         (async () => {
           if (!debugModeRef.current) await playSong(track.uri);
           startCountdown(30, async () => {
             if (!debugModeRef.current) await pauseSong();
             clearTimers();
-            setState((prev) => ({ ...prev, phase: 'guess-prompt' }));
+            update({ phase: 'guess-prompt' });
+            // 30s guess timer for the steal team
+            startCountdown(30, () => {
+              clearTimers();
+              stealModeRef.current = false;
+              setState((prev) => ({
+                ...prev,
+                phase: 'reveal',
+                stealMode: false,
+                stealTeamIndex: null,
+                noneScored: true,
+              }));
+            });
           });
         })();
       }
+    } else {
+      stealModeRef.current = false;
     }
-  }, [clearTimers, startCountdown]);
+  }, [clearTimers, startCountdown, update]);
+
+  // Keep ref current so buzzIn's timer callback always calls the latest version
+  playerDidNotGetItRef.current = playerDidNotGetIt;
 
   const noScoreRound = useCallback(() => {
-    setState((prev) => ({ ...prev, phase: 'round-summary', noneScored: false, roundPoints: {} }));
+    setState((prev) => ({ ...prev, phase: 'round-summary', noneScored: false, roundPoints: {}, speedEliminatedTeams: [] }));
   }, []);
 
   const confirmCorrect = useCallback((gotArtist: boolean, gotSong: boolean) => {
@@ -243,21 +346,22 @@ export function useGame() {
         i === scoringTeamIdx ? { ...t, score: t.score + pts } : t,
       );
       const roundPoints = scoringTeam ? { [scoringTeam.id]: pts } : {};
-      return { ...prev, teams, phase: 'round-summary', speedPoints: null, speedScoringTeamIndex: null, roundPoints };
+      return { ...prev, teams, phase: 'round-summary', speedPoints: null, speedScoringTeamIndex: null, roundPoints, speedEliminatedTeams: [] };
     });
   }, []);
 
   const nextRound = useCallback(() => {
     trackIndexRef.current += 1;
     stealModeRef.current = false;
+    setCanReplay(false);
     setState((prev) => {
       const nextRoundNum = prev.round + 1;
       const nextTeam = (prev.currentTeamIndex + 1) % prev.teams.length;
       if (nextRoundNum > prev.maxRounds) {
-        return { ...prev, phase: 'finished', stealMode: false, stealTeamIndex: null, noneScored: false };
+        return { ...prev, phase: 'finished', stealMode: false, stealTeamIndex: null, noneScored: false, speedEliminatedTeams: [] };
       }
       if (trackIndexRef.current >= tracksRef.current.length) {
-        return { ...prev, currentTeamIndex: nextTeam, round: nextRoundNum, phase: 'genre-select', stealMode: false, stealTeamIndex: null, noneScored: false };
+        return { ...prev, currentTeamIndex: nextTeam, round: nextRoundNum, phase: 'genre-select', stealMode: false, stealTeamIndex: null, noneScored: false, speedEliminatedTeams: [] };
       }
       const nextTrack = tracksRef.current[trackIndexRef.current];
       return {
@@ -271,6 +375,7 @@ export function useGame() {
         stealMode: false,
         stealTeamIndex: null,
         noneScored: false,
+        speedEliminatedTeams: [],
       };
     });
   }, []);
@@ -292,6 +397,7 @@ export function useGame() {
     songSourceRef.current = 'advanced';
     debugModeRef.current = false;
     stealModeRef.current = false;
+    setCanReplay(false);
     setState(INITIAL_STATE);
   }, [clearTimers]);
 
@@ -299,10 +405,12 @@ export function useGame() {
     state,
     timerRunning,
     timeLeft,
+    canReplay,
     startGame,
     selectGenre,
     betAndPlay,
     buzzIn,
+    replaySong,
     playerGotIt,
     noScoreRound,
     markCorrect,
