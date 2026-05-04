@@ -202,7 +202,7 @@ export default function App() {
             timeLeft={timeLeft}
             stealMode={state.stealMode}
             stealTeam={stealTeam}
-            onBuzzIn={buzzIn}
+            onBuzzIn={() => buzzIn()}
             onSkip={skipSong}
             sessionCode={sessionCode}
           />
@@ -212,7 +212,7 @@ export default function App() {
           <SpeedPlaying
             currentTeam={currentTeam}
             timeLeft={timeLeft}
-            onBuzzIn={buzzIn}
+            onBuzzIn={() => buzzIn()}
             onSkip={skipSong}
             sessionCode={sessionCode}
           />

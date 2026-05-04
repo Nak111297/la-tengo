@@ -232,6 +232,7 @@ export function useGame() {
   }, [update, clearTimers, startCountdown]);
 
   const buzzIn = useCallback((teamIndexOverride?: number) => {
+    const teamIndex = typeof teamIndexOverride === 'number' ? teamIndexOverride : undefined;
     if (!debugModeRef.current && gameModeRef.current !== 'speed') {
       pauseSong().catch(() => {});
     }
@@ -247,14 +248,14 @@ export function useGame() {
         ...prev,
         phase: 'guess-prompt',
         speedPoints: pts,
-        speedScoringTeamIndex: teamIndexOverride ?? null,
+        speedScoringTeamIndex: teamIndex ?? null,
       }));
     } else {
       // Knowledge: go to guess-prompt, enable replay, start 30s auto-fail timer
       if (!stealModeRef.current) setCanReplay(true);
       setState(prev => ({
         ...prev,
-        currentTeamIndex: teamIndexOverride !== undefined ? teamIndexOverride : prev.currentTeamIndex,
+        currentTeamIndex: teamIndex !== undefined ? teamIndex : prev.currentTeamIndex,
         phase: 'guess-prompt',
       }));
       startCountdown(30, () => {
