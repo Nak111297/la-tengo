@@ -6,11 +6,12 @@ interface Props {
   timeLeft: number;
   onBuzzIn: () => void;
   onSkip: () => void;
+  sessionCode?: string | null;
 }
 
 const EQ_DELAYS = [0, 0.12, 0.06, 0.18, 0.03, 0.15];
 
-export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip }: Props) {
+export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip, sessionCode }: Props) {
   const pct = Math.max(0, Math.min(100, (timeLeft / SPEED_DURATION) * 100));
   const currentScore = Math.round(pct);
   const strokeLen = 276.5;
@@ -76,6 +77,24 @@ export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip }
       >
         ¡Que Rolón!
       </button>
+
+      {sessionCode && (
+        <div className="flex flex-col items-center gap-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-qr-muted/50">
+            Buzzers — escanear para unirse
+          </p>
+          <div className="rounded-[14px] border border-white/10 bg-qr-card p-1.5">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(window.location.origin + '/buzz?room=' + sessionCode)}&size=96x96&color=e2e8f0&bgcolor=0f0f1a`}
+              alt="QR"
+              className="h-24 w-24 rounded-lg"
+            />
+          </div>
+          <span className="font-mono text-base font-black tracking-[0.3em] text-qr-yellow">
+            {sessionCode}
+          </span>
+        </div>
+      )}
 
       <button
         onClick={onSkip}

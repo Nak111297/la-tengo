@@ -26,6 +26,8 @@ export interface GameState {
   speedEliminatedTeams: number[];
   songSource: SongSource;
   roundPoints: Record<string, number>;
+  multiphone: boolean;
+  sessionCode: string | null;
 }
 
 export type GamePhase =

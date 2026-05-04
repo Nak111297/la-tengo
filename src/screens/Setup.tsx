@@ -3,7 +3,7 @@ import { TEAM_COLORS } from '../types';
 import type { GameMode, SongSource } from '../types';
 
 interface Props {
-  onStart: (teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode: boolean) => void;
+  onStart: (teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode: boolean, multiphone: boolean) => void;
 }
 
 const ROUND_OPTIONS = [5, 8, 10, 15, 20];
@@ -16,6 +16,7 @@ export default function Setup({ onStart }: Props) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [songSource, setSongSource] = useState<SongSource>('advanced');
   const [debugMode, setDebugMode] = useState(false);
+  const [multiphone, setMultiphone] = useState(false);
 
   const addTeam = () => {
     if (teams.length < 8) setTeams([...teams, '']);
@@ -154,6 +155,27 @@ export default function Setup({ onStart }: Props) {
             </div>
 
             <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-qr-muted">Multidispositivo</p>
+              <button
+                onClick={() => setMultiphone(!multiphone)}
+                className={`flex w-full items-center justify-between rounded-[16px] border p-3 transition ${
+                  multiphone ? 'border-qr-cyan/40 bg-qr-cyan/10' : 'border-white/10 bg-qr-card hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📱</span>
+                  <div className="text-left">
+                    <p className={`text-sm font-bold ${multiphone ? 'text-qr-cyan' : 'text-qr-text'}`}>Multiphone</p>
+                    <p className="text-[10px] text-qr-muted leading-tight">Otros teléfonos pueden buzzear</p>
+                  </div>
+                </div>
+                <div className={`h-5 w-9 rounded-full transition-colors ${multiphone ? 'bg-qr-cyan' : 'bg-white/15'}`}>
+                  <div className={`mt-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${multiphone ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </div>
+              </button>
+            </div>
+
+            <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-widest text-qr-muted">Desarrollo</p>
               <button
                 onClick={() => setDebugMode(!debugMode)}
@@ -178,7 +200,7 @@ export default function Setup({ onStart }: Props) {
       </div>
 
       <button
-        onClick={() => onStart(teams.map((t) => t.trim()), maxRounds, gameMode, songSource, debugMode)}
+        onClick={() => onStart(teams.map((t) => t.trim()), maxRounds, gameMode, songSource, debugMode, multiphone)}
         disabled={!canStart}
         className="w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110 disabled:opacity-30 disabled:pointer-events-none glow-pulse"
       >

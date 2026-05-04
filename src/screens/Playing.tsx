@@ -8,11 +8,12 @@ interface Props {
   stealTeam: Team | null;
   onBuzzIn: () => void;
   onSkip: () => void;
+  sessionCode?: string | null;
 }
 
 const EQ_DELAYS = [0, 0.15, 0.08, 0.22, 0.05];
 
-export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, stealTeam, onBuzzIn, onSkip }: Props) {
+export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, stealTeam, onBuzzIn, onSkip, sessionCode }: Props) {
   const pct = Math.max(0, Math.min(100, (timeLeft / betSeconds) * 100));
   const ringColor = stealMode ? '#FF4D4D' : '#22D3EE';
 
@@ -82,6 +83,24 @@ export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, 
       >
         ¡Que Rolón!
       </button>
+
+      {sessionCode && (
+        <div className="flex flex-col items-center gap-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-qr-muted/50">
+            Buzzers — escanear para unirse
+          </p>
+          <div className="rounded-[14px] border border-white/10 bg-qr-card p-1.5">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(window.location.origin + '/buzz?room=' + sessionCode)}&size=96x96&color=e2e8f0&bgcolor=0f0f1a`}
+              alt="QR"
+              className="h-24 w-24 rounded-lg"
+            />
+          </div>
+          <span className="font-mono text-base font-black tracking-[0.3em] text-qr-cyan">
+            {sessionCode}
+          </span>
+        </div>
+      )}
 
       <button
         onClick={onSkip}

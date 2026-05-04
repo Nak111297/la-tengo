@@ -1,8 +1,15 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { GameState, Team, TrackInfo, GameMode, SongSource } from '../types';
 import { TEAM_COLORS, SPEED_DURATION } from '../types';
 import { calculateScore, calculateSpeedScore } from './scoring';
 import { loadTracksForGenre, playSong, pauseSong } from './spotify-player';
+import {
+  generateRoomCode,
+  createSession,
+  subscribeBuzz,
+  clearBuzz,
+  isFirebaseReady,
+} from './firebase';
 
 const DEBUG_TRACKS: TrackInfo[] = [
   { uri: 'debug:1',  name: 'Bohemian Rhapsody',      artist: 'Queen',           album: 'A Night at the Opera',           albumArt: '', year: 1975 },
@@ -45,6 +52,8 @@ const INITIAL_STATE: GameState = {
   songSource: 'advanced',
   speedEliminatedTeams: [],
   roundPoints: {},
+  multiphone: false,
+  sessionCode: null,
 };
 
 export function useGame() {
@@ -63,9 +72,18 @@ export function useGame() {
   const savedSpeedTimeRef = useRef(0);
   const playerDidNotGetItRef = useRef<() => void>(() => {});
 
+  // Multiphone refs
+  const multiphoneRef = useRef(false);
+  const sessionCodeRef = useRef<string | null>(null);
+  const phaseRef = useRef<GameState['phase']>('setup');
+  const currentTeamIndexRef = useRef(0);
+  const speedEliminatedTeamsRef = useRef<number[]>([]);
+  const buzzInRef = useRef<(teamIndexOverride?: number) => void>(() => {});
+
   const [timerRunning, setTimerRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [canReplay, setCanReplay] = useState(false);
+  const [sessionCode, setSessionCode] = useState<string | null>(null);
 
   const update = useCallback((partial: Partial<GameState>) => {
     setState((prev) => ({ ...prev, ...partial }));
@@ -97,7 +115,7 @@ export function useGame() {
     timerRef.current = setTimeout(onEnd, seconds * 1000);
   }, []);
 
-  const startGame = useCallback((teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode = false) => {
+  const startGame = useCallback((teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode = false, multiphone = false) => {
     const teams: Team[] = teamNames.map((name, i) => ({
       id: `team-${i}`,
       name,
@@ -107,7 +125,20 @@ export function useGame() {
     gameModeRef.current = gameMode;
     songSourceRef.current = songSource;
     debugModeRef.current = debugMode;
-    update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1, maxRounds, gameMode, songSource });
+    multiphoneRef.current = multiphone;
+
+    let code: string | null = null;
+    if (multiphone && isFirebaseReady()) {
+      code = generateRoomCode();
+      sessionCodeRef.current = code;
+      setSessionCode(code);
+      createSession(code, teams.map(t => ({ id: t.id, name: t.name, color: t.color })));
+    } else {
+      sessionCodeRef.current = null;
+      setSessionCode(null);
+    }
+
+    update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1, maxRounds, gameMode, songSource, multiphone, sessionCode: code });
   }, [update]);
 
   const selectGenre = useCallback(async (genre: string): Promise<string | null> => {
@@ -179,7 +210,7 @@ export function useGame() {
     });
   }, [update, clearTimers, startCountdown]);
 
-  const buzzIn = useCallback(async () => {
+  const buzzIn = useCallback(async (teamIndexOverride?: number) => {
     if (!debugModeRef.current && gameModeRef.current !== 'speed') await pauseSong();
     // Save remaining time before clearing — needed to resume speed countdown on wrong guess
     if (gameModeRef.current === 'speed') {
@@ -188,17 +219,26 @@ export function useGame() {
     clearTimers();
     if (gameModeRef.current === 'speed') {
       const pts = Math.round((timeLeftRef.current / SPEED_DURATION) * 100);
-      setState(prev => ({ ...prev, phase: 'guess-prompt', speedPoints: pts }));
+      setState(prev => ({
+        ...prev,
+        currentTeamIndex: teamIndexOverride !== undefined ? teamIndexOverride : prev.currentTeamIndex,
+        phase: 'guess-prompt',
+        speedPoints: pts,
+      }));
     } else {
       // Knowledge: go to guess-prompt, enable replay, start 30s auto-fail timer
       if (!stealModeRef.current) setCanReplay(true);
-      update({ phase: 'guess-prompt' });
+      setState(prev => ({
+        ...prev,
+        currentTeamIndex: teamIndexOverride !== undefined ? teamIndexOverride : prev.currentTeamIndex,
+        phase: 'guess-prompt',
+      }));
       startCountdown(30, () => {
         clearTimers();
         playerDidNotGetItRef.current();
       });
     }
-  }, [clearTimers, update, startCountdown]);
+  }, [clearTimers, startCountdown]);
 
   const replaySong = useCallback(async () => {
     setCanReplay(false);
@@ -326,8 +366,38 @@ export function useGame() {
     }
   }, [clearTimers, startCountdown, update]);
 
-  // Keep ref current so buzzIn's timer callback always calls the latest version
+  // Keep refs current every render
   playerDidNotGetItRef.current = playerDidNotGetIt;
+  buzzInRef.current = buzzIn;
+
+  // Sync phase / team refs for use inside the Firebase closure
+  useEffect(() => { phaseRef.current = state.phase; }, [state.phase]);
+  useEffect(() => { currentTeamIndexRef.current = state.currentTeamIndex; }, [state.currentTeamIndex]);
+  useEffect(() => { speedEliminatedTeamsRef.current = state.speedEliminatedTeams; }, [state.speedEliminatedTeams]);
+
+  // Firebase buzz listener — active only when multiphone session is live
+  useEffect(() => {
+    const code = sessionCodeRef.current;
+    if (!code) return;
+    return subscribeBuzz(code, (teamIndex: number) => {
+      // Clear the buzz immediately so next buzz can come through
+      clearBuzz(code);
+      const phase = phaseRef.current;
+      if (phase !== 'playing') return;
+      if (gameModeRef.current === 'knowledge') {
+        // Only the current team can buzz in knowledge mode
+        if (teamIndex === currentTeamIndexRef.current) {
+          buzzInRef.current(teamIndex);
+        }
+      } else {
+        // Speed: any non-eliminated team can buzz
+        if (!speedEliminatedTeamsRef.current.includes(teamIndex)) {
+          buzzInRef.current(teamIndex);
+        }
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionCode]);
 
   const noScoreRound = useCallback(() => {
     setState((prev) => ({ ...prev, phase: 'round-summary', noneScored: false, roundPoints: {}, speedEliminatedTeams: [] }));
@@ -397,7 +467,10 @@ export function useGame() {
     songSourceRef.current = 'advanced';
     debugModeRef.current = false;
     stealModeRef.current = false;
+    multiphoneRef.current = false;
+    sessionCodeRef.current = null;
     setCanReplay(false);
+    setSessionCode(null);
     setState(INITIAL_STATE);
   }, [clearTimers]);
 
@@ -406,6 +479,7 @@ export function useGame() {
     timerRunning,
     timeLeft,
     canReplay,
+    sessionCode,
     startGame,
     selectGenre,
     betAndPlay,

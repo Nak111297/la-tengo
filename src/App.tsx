@@ -24,7 +24,7 @@ export default function App() {
   const [confirmReset, setConfirmReset] = useState(false);
 
   const {
-    state, timeLeft, canReplay,
+    state, timeLeft, canReplay, sessionCode,
     startGame, selectGenre, betAndPlay,
     buzzIn, replaySong, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
     confirmCorrect, nextRound, skipSong, resetGame, finishGame,
@@ -145,7 +145,7 @@ export default function App() {
 
       <div className={state.phase !== 'setup' ? 'pt-11' : ''}>
         {state.phase === 'setup' && (
-          <Setup onStart={(t, r, g, s, debug) => { setDebugMode(debug); startGame(t, r, g, s, debug); }} />
+          <Setup onStart={(t, r, g, s, debug, mp) => { setDebugMode(debug); startGame(t, r, g, s, debug, mp); }} />
         )}
 
         {state.phase === 'finished' && (
@@ -204,6 +204,7 @@ export default function App() {
             stealTeam={stealTeam}
             onBuzzIn={buzzIn}
             onSkip={skipSong}
+            sessionCode={sessionCode}
           />
         )}
 
@@ -213,6 +214,7 @@ export default function App() {
             timeLeft={timeLeft}
             onBuzzIn={buzzIn}
             onSkip={skipSong}
+            sessionCode={sessionCode}
           />
         )}
 
