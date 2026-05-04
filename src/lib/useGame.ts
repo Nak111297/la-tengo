@@ -307,7 +307,7 @@ export function useGame() {
     // ── Speed mode ───────────────────────────────────────────────────────────
     if (gameModeRef.current === 'speed') {
       const remaining = savedSpeedTimeRef.current;
-      let willResume = false;
+      let resumeCountdown = false;
 
       setState((prev) => {
         const elimIdx = prev.speedScoringTeamIndex;
@@ -318,7 +318,6 @@ export function useGame() {
         const newEliminated = [...prev.speedEliminatedTeams, elimIdx];
         const done = remaining <= 0.5 || newEliminated.length >= prev.teams.length;
         if (done) {
-          willResume = false;
           return {
             ...prev,
             phase: 'reveal',
@@ -328,7 +327,7 @@ export function useGame() {
             speedEliminatedTeams: [],
           };
         }
-        willResume = true;
+        resumeCountdown = true;
         return {
           ...prev,
           phase: 'playing',
@@ -338,12 +337,14 @@ export function useGame() {
         };
       });
 
-      if (willResume) {
-        startCountdown(remaining, () => {
-          clearTimers();
-          setState((prev) => ({ ...prev, phase: 'reveal', noneScored: true, speedEliminatedTeams: [] }));
-        });
-      }
+      window.setTimeout(() => {
+        if (resumeCountdown) {
+          startCountdown(remaining, () => {
+            clearTimers();
+            setState((prev) => ({ ...prev, phase: 'reveal', noneScored: true, speedEliminatedTeams: [] }));
+          });
+        }
+      }, 0);
       return;
     }
 
