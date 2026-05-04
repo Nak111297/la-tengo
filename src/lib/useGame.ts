@@ -233,13 +233,14 @@ export function useGame() {
 
   const buzzIn = useCallback(async (teamIndexOverride?: number) => {
     if (!debugModeRef.current && gameModeRef.current !== 'speed') await pauseSong();
-    // Save remaining time before clearing — needed to resume speed countdown on wrong guess
+    // Save remaining time before clearing; clearTimers resets the timer refs.
+    const speedRemaining = timeLeftRef.current;
     if (gameModeRef.current === 'speed') {
-      savedSpeedTimeRef.current = timeLeftRef.current;
+      savedSpeedTimeRef.current = speedRemaining;
     }
     clearTimers();
     if (gameModeRef.current === 'speed') {
-      const pts = Math.round((timeLeftRef.current / SPEED_DURATION) * 100);
+      const pts = Math.round((speedRemaining / SPEED_DURATION) * 100);
       setState(prev => ({
         ...prev,
         phase: 'guess-prompt',
