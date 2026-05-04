@@ -106,6 +106,8 @@ export function useGame() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     timerRef.current = null;
     intervalRef.current = null;
+    timeLeftRef.current = 0;
+    setTimeLeft(0);
     setTimerRunning(false);
     timerStartedAtRef.current = null;
     timerDurationRef.current = null;
@@ -113,6 +115,7 @@ export function useGame() {
   }, []);
 
   const startCountdown = useCallback((seconds: number, onEnd: () => void) => {
+    clearTimers();
     timerStartedAtRef.current = Date.now();
     timerDurationRef.current = seconds;
     setTimerSyncTick(v => v + 1);
@@ -131,7 +134,7 @@ export function useGame() {
       }
     }, 50);
     timerRef.current = setTimeout(onEnd, seconds * 1000);
-  }, []);
+  }, [clearTimers]);
 
   const startGame = useCallback((teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode = false, multiphone = false, preGeneratedCode?: string | null) => {
     const teams: Team[] = teamNames.map((name, i) => ({
@@ -298,6 +301,8 @@ export function useGame() {
   }, [clearTimers, update]);
 
   const playerDidNotGetIt = useCallback(() => {
+    clearTimers();
+
     // ── Speed mode ───────────────────────────────────────────────────────────
     if (gameModeRef.current === 'speed') {
       const remaining = savedSpeedTimeRef.current;
