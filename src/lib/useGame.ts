@@ -233,9 +233,6 @@ export function useGame() {
 
   const buzzIn = useCallback((teamIndexOverride?: number) => {
     const teamIndex = typeof teamIndexOverride === 'number' ? teamIndexOverride : undefined;
-    if (!debugModeRef.current && gameModeRef.current !== 'speed') {
-      pauseSong().catch(() => {});
-    }
     // Save remaining time before clearing; clearTimers resets the timer refs.
     const speedRemaining = timeLeftRef.current;
     if (gameModeRef.current === 'speed') {
