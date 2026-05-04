@@ -115,7 +115,7 @@ export function useGame() {
     timerRef.current = setTimeout(onEnd, seconds * 1000);
   }, []);
 
-  const startGame = useCallback((teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode = false, multiphone = false) => {
+  const startGame = useCallback((teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode = false, multiphone = false, preGeneratedCode?: string | null) => {
     const teams: Team[] = teamNames.map((name, i) => ({
       id: `team-${i}`,
       name,
@@ -129,7 +129,7 @@ export function useGame() {
 
     let code: string | null = null;
     if (multiphone && isFirebaseReady()) {
-      code = generateRoomCode();
+      code = preGeneratedCode ?? generateRoomCode();
       sessionCodeRef.current = code;
       setSessionCode(code);
       createSession(code, teams.map(t => ({ id: t.id, name: t.name, color: t.color })));

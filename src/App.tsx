@@ -145,7 +145,7 @@ export default function App() {
 
       <div className={state.phase !== 'setup' ? 'pt-11' : ''}>
         {state.phase === 'setup' && (
-          <Setup onStart={(t, r, g, s, debug, mp) => { setDebugMode(debug); startGame(t, r, g, s, debug, mp); }} />
+          <Setup onStart={(t, r, g, s, debug, mp, code) => { setDebugMode(debug); startGame(t, r, g, s, debug, mp, code); }} />
         )}
 
         {state.phase === 'finished' && (

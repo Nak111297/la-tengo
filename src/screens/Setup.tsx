@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { TEAM_COLORS } from '../types';
 import type { GameMode, SongSource } from '../types';
+import { generateRoomCode, isFirebaseReady } from '../lib/firebase';
 
 interface Props {
-  onStart: (teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode: boolean, multiphone: boolean) => void;
+  onStart: (teamNames: string[], maxRounds: number, gameMode: GameMode, songSource: SongSource, debugMode: boolean, multiphone: boolean, previewCode: string | null) => void;
 }
 
 const ROUND_OPTIONS = [5, 8, 10, 15, 20];
@@ -17,6 +18,13 @@ export default function Setup({ onStart }: Props) {
   const [songSource, setSongSource] = useState<SongSource>('advanced');
   const [debugMode, setDebugMode] = useState(false);
   const [multiphone, setMultiphone] = useState(false);
+  const [previewCode, setPreviewCode] = useState<string | null>(null);
+
+  const toggleMultiphone = () => {
+    const next = !multiphone;
+    setMultiphone(next);
+    setPreviewCode(next && isFirebaseReady() ? generateRoomCode() : null);
+  };
 
   const addTeam = () => {
     if (teams.length < 8) setTeams([...teams, '']);
@@ -157,7 +165,7 @@ export default function Setup({ onStart }: Props) {
             <div>
               <p className="mb-2 text-xs font-bold uppercase tracking-widest text-qr-muted">Multidispositivo</p>
               <button
-                onClick={() => setMultiphone(!multiphone)}
+                onClick={toggleMultiphone}
                 className={`flex w-full items-center justify-between rounded-[16px] border p-3 transition ${
                   multiphone ? 'border-qr-cyan/40 bg-qr-cyan/10' : 'border-white/10 bg-qr-card hover:border-white/20'
                 }`}
@@ -173,6 +181,35 @@ export default function Setup({ onStart }: Props) {
                   <div className={`mt-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${multiphone ? 'translate-x-4' : 'translate-x-0.5'}`} />
                 </div>
               </button>
+
+              {/* QR preview — visible as soon as toggle is on */}
+              {multiphone && previewCode && (
+                <div className="mt-3 flex flex-col items-center gap-2 rounded-[16px] border border-qr-cyan/20 bg-qr-bg/60 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-qr-muted/60">
+                    Escanear para unirse
+                  </p>
+                  <div className="rounded-[12px] border border-white/10 bg-qr-card p-1.5">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(window.location.origin + '/buzz?room=' + previewCode)}&size=120x120&color=e2e8f0&bgcolor=0f0f1a`}
+                      alt="QR"
+                      className="h-28 w-28 rounded-lg"
+                    />
+                  </div>
+                  <span className="font-mono text-xl font-black tracking-[0.3em] text-qr-cyan">
+                    {previewCode}
+                  </span>
+                  <p className="text-[10px] text-qr-muted/50 text-center leading-tight">
+                    Los jugadores pueden unirse ahora.<br />La partida empieza cuando presiones Comenzar.
+                  </p>
+                </div>
+              )}
+
+              {/* Firebase not configured warning */}
+              {multiphone && !previewCode && (
+                <p className="mt-2 text-center text-[10px] text-qr-red/80 leading-tight">
+                  ⚠ Configura VITE_FIREBASE_DATABASE_URL para usar Multiphone.
+                </p>
+              )}
             </div>
 
             <div>
@@ -200,7 +237,7 @@ export default function Setup({ onStart }: Props) {
       </div>
 
       <button
-        onClick={() => onStart(teams.map((t) => t.trim()), maxRounds, gameMode, songSource, debugMode, multiphone)}
+        onClick={() => onStart(teams.map((t) => t.trim()), maxRounds, gameMode, songSource, debugMode, multiphone, previewCode)}
         disabled={!canStart}
         className="w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110 disabled:opacity-30 disabled:pointer-events-none glow-pulse"
       >
