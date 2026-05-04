@@ -260,21 +260,24 @@ export function useGame() {
   }, [clearTimers, startCountdown, update]);
 
   const playerGotIt = useCallback((teamIdx?: number) => {
+    // Stop the 30s auto-fail timer — player claimed the answer, timer no longer needed
+    clearTimers();
     if (gameModeRef.current === 'speed' && teamIdx !== undefined) {
       setState(prev => ({ ...prev, phase: 'reveal', speedScoringTeamIndex: teamIdx }));
     } else {
       update({ phase: 'reveal' });
     }
-  }, [update]);
+  }, [clearTimers, update]);
 
   const markCorrect = useCallback(() => {
+    clearTimers(); // ensure no stale auto-fail timer survives into score-artist
     update({ phase: 'score-artist' });
     // Knowledge mode: replay the song so there's background music during score check
     if (!debugModeRef.current && gameModeRef.current === 'knowledge') {
       const track = tracksRef.current[trackIndexRef.current];
       if (track) playSong(track.uri).catch(() => {});
     }
-  }, [update]);
+  }, [clearTimers, update]);
 
   const playerDidNotGetIt = useCallback(() => {
     // ── Speed mode ───────────────────────────────────────────────────────────
@@ -400,8 +403,9 @@ export function useGame() {
   }, [sessionCode]);
 
   const noScoreRound = useCallback(() => {
+    clearTimers();
     setState((prev) => ({ ...prev, phase: 'round-summary', noneScored: false, roundPoints: {}, speedEliminatedTeams: [] }));
-  }, []);
+  }, [clearTimers]);
 
   const confirmCorrect = useCallback((gotArtist: boolean, gotSong: boolean) => {
     setState((prev) => {
