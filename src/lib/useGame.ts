@@ -11,6 +11,7 @@ import {
   isFirebaseReady,
   pushGameState,
   subscribeAction,
+  type RemoteActionPayload,
   type RemoteGameState,
 } from './firebase';
 
@@ -84,7 +85,7 @@ export function useGame() {
   const speedEliminatedTeamsRef = useRef<number[]>([]);
   const buzzInRef = useRef<(teamIndexOverride?: number) => void>(() => {});
   // Action handler ref keeps the Firebase listener connected to current callbacks.
-  const actionHandlerRef = useRef<(type: string) => void>(() => {});
+  const actionHandlerRef = useRef<(type: string, payload: RemoteActionPayload | null) => void>(() => {});
 
   // Timer tracking for remote state sync
   const timerStartedAtRef = useRef<number | null>(null);
@@ -501,9 +502,27 @@ export function useGame() {
   // Remote phone actions control the host only when the host is already in the
   // matching phase. Late or duplicate actions are ignored.
   useEffect(() => {
-    actionHandlerRef.current = (type: string) => {
+    actionHandlerRef.current = (type: string, payload: RemoteActionPayload | null) => {
       const phase = phaseRef.current;
       switch (type) {
+        case 'select-genre':
+          if (
+            phase === 'genre-select' &&
+            payload?.teamIndex === currentTeamIndexRef.current &&
+            typeof payload.genre === 'string'
+          ) {
+            selectGenre(payload.genre);
+          }
+          break;
+        case 'bet-time':
+          if (
+            phase === 'bet-time' &&
+            payload?.teamIndex === currentTeamIndexRef.current &&
+            typeof payload.seconds === 'number'
+          ) {
+            betAndPlay(payload.seconds);
+          }
+          break;
         case 'got-it':
           if (phase === 'guess-prompt') playerGotIt();
           break;
@@ -524,7 +543,7 @@ export function useGame() {
           break;
       }
     };
-  }, [playerGotIt, markCorrect, playerDidNotGetIt, noScoreRound, nextRound, finishGame]);
+  }, [selectGenre, betAndPlay, playerGotIt, markCorrect, playerDidNotGetIt, noScoreRound, nextRound, finishGame]);
 
   // Push full game state to Firebase whenever state or timer changes.
   useEffect(() => {
@@ -557,8 +576,8 @@ export function useGame() {
   // Subscribe to actions pushed from remote phones.
   useEffect(() => {
     if (!sessionCode) return;
-    return subscribeAction(sessionCode, (type) => {
-      actionHandlerRef.current(type);
+    return subscribeAction(sessionCode, (type, payload) => {
+      actionHandlerRef.current(type, payload);
     });
   }, [sessionCode]);
 

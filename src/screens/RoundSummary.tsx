@@ -7,6 +7,7 @@ interface Props {
   roundPoints: Record<string, number>;
   onNext: () => void;
   onEnd: () => void;
+  showActions?: boolean;
 }
 
 interface RowData {
@@ -117,7 +118,7 @@ function TeamRow({ row, rank, isNewLeader, entryIdx, showLeaderBadge, setRef }: 
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function RoundSummary({ teams, round, roundPoints, onNext, onEnd }: Props) {
+export default function RoundSummary({ teams, round, roundPoints, onNext, onEnd, showActions = true }: Props) {
   const rowData: RowData[] = teams.map((team) => ({
     team,
     prevScore: team.score - (roundPoints[team.id] ?? 0),
@@ -233,20 +234,22 @@ export default function RoundSummary({ teams, round, roundPoints, onNext, onEnd 
       </div>
 
       {/* Actions */}
-      <div className="flex w-full max-w-sm gap-2">
-        <button
-          onClick={onNext}
-          className="flex-1 rounded-full bg-qr-primary py-4 text-base font-black text-qr-text shadow-[0_0_24px_rgba(255,46,136,0.45)] transition active:scale-95 hover:brightness-110"
-        >
-          Siguiente ronda →
-        </button>
-        <button
-          onClick={onEnd}
-          className="rounded-full border border-white/15 px-5 py-4 text-sm text-qr-muted transition hover:border-qr-red hover:text-qr-red"
-        >
-          Terminar
-        </button>
-      </div>
+      {showActions && (
+        <div className="flex w-full max-w-sm gap-2">
+          <button
+            onClick={onNext}
+            className="flex-1 rounded-full bg-qr-primary py-4 text-base font-black text-qr-text shadow-[0_0_24px_rgba(255,46,136,0.45)] transition active:scale-95 hover:brightness-110"
+          >
+            Siguiente ronda →
+          </button>
+          <button
+            onClick={onEnd}
+            className="rounded-full border border-white/15 px-5 py-4 text-sm text-qr-muted transition hover:border-qr-red hover:text-qr-red"
+          >
+            Terminar
+          </button>
+        </div>
+      )}
     </div>
   );
 }

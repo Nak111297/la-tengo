@@ -167,12 +167,18 @@ export function subscribeGameState(
 
 // ── Remote actions (players → host) ──────────────────────────────────────────
 
-export async function pushAction(code: string, type: string): Promise<void> {
+export interface RemoteActionPayload {
+  teamIndex?: number;
+  genre?: string;
+  seconds?: number;
+}
+
+export async function pushAction(code: string, type: string, payload?: RemoteActionPayload): Promise<void> {
   if (!DB_URL) return;
   await fetch(`${DB_URL}/sessions/${code}/pendingAction.json`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, ts: Date.now() }),
+    body: JSON.stringify({ type, payload: payload ?? null, ts: Date.now() }),
   });
 }
 
@@ -183,7 +189,7 @@ export async function pushAction(code: string, type: string): Promise<void> {
  */
 export function subscribeAction(
   code: string,
-  onAction: (type: string) => void,
+  onAction: (type: string, payload: RemoteActionPayload | null) => void,
   notBefore = Date.now(),
 ): () => void {
   if (!DB_URL) return () => {};
@@ -192,10 +198,10 @@ export function subscribeAction(
   const handle = (e: MessageEvent) => {
     try {
       const payload = JSON.parse(e.data as string) as { data: unknown };
-      const val = payload.data as { type: string; ts: number } | null;
+      const val = payload.data as { type: string; payload?: RemoteActionPayload | null; ts: number } | null;
       if (val && typeof val.type === 'string' && val.ts > lastTs) {
         lastTs = val.ts;
-        onAction(val.type);
+        onAction(val.type, val.payload ?? null);
       }
     } catch { /* ignore */ }
   };

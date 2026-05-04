@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { subscribeTeams, subscribeGameState, sendBuzz, pushAction } from '../lib/firebase';
 import type { SessionTeam, RemoteGameState } from '../lib/firebase';
+import { BET_OPTIONS, GENRES, GENRE_ICONS, SPEED_DURATION } from '../types';
+import RoundSummary from './RoundSummary';
+import Finished from './Finished';
 
 // ─── Timer hook ───────────────────────────────────────────────────────────────
 function useRemoteTimer(gs: RemoteGameState | null) {
@@ -84,6 +87,25 @@ function TimerBar({ timeLeft, total, color = '#FF2E88' }: { timeLeft: number; to
   );
 }
 
+function SpeedPointsMeter({ timeLeft }: { timeLeft: number }) {
+  const points = Math.max(0, Math.round((timeLeft / SPEED_DURATION) * 100));
+  const pct = Math.max(0, Math.min(points, 100));
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Puntos en juego</p>
+      <div
+        className="flex h-28 w-28 items-center justify-center rounded-full border-4"
+        style={{
+          borderColor: pct < 25 ? '#FF2E88' : '#FFD23F',
+          boxShadow: `0 0 26px ${pct < 25 ? '#FF2E8855' : '#FFD23F55'}`,
+        }}
+      >
+        <span className="font-display text-5xl font-black text-qr-yellow tabular-nums">{points}</span>
+      </div>
+    </div>
+  );
+}
+
 function ActionBtn({ label, sub, onClick, color, disabled = false }: {
   label: string; sub?: string; onClick: () => void; color: string; disabled?: boolean;
 }) {
@@ -107,6 +129,88 @@ function WaitingView({ label }: { label: string }) {
     <div className="flex flex-col items-center gap-4 py-8">
       <div className="h-8 w-8 rounded-full border-4 border-white/10 border-t-qr-primary animate-spin" />
       <p className="text-sm text-qr-muted text-center">{label}</p>
+    </div>
+  );
+}
+
+function GenreChoiceView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: string; myTeamIdx: number }) {
+  const [done, setDone] = useState(false);
+  const isMyTurn = myTeamIdx === gs.currentTeamIndex;
+  const currentTeam = gs.teams[gs.currentTeamIndex];
+
+  if (!isMyTurn) {
+    return <WaitingView label={`${currentTeam?.name} está eligiendo género...`} />;
+  }
+
+  const select = (genre: string) => {
+    if (done) return;
+    setDone(true);
+    pushAction(room, 'select-genre', { teamIndex: myTeamIdx, genre });
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-5 w-full">
+      <div className="text-center">
+        <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Tu turno</p>
+        <h2 className="mt-1 font-display text-2xl font-bold" style={{ color: currentTeam?.color }}>
+          Elegí género
+        </h2>
+      </div>
+      <div className="grid w-full grid-cols-2 gap-2">
+        {GENRES.map((genre) => (
+          <button
+            key={genre}
+            onClick={() => select(genre)}
+            disabled={done}
+            className="flex items-center gap-2 rounded-[18px] border border-white/10 bg-qr-card/60 px-3 py-4 text-left text-sm font-bold text-qr-text transition active:scale-95 disabled:opacity-35"
+          >
+            <span className="text-lg">{GENRE_ICONS[genre] ?? '🎵'}</span>
+            <span className="leading-tight">{genre}</span>
+          </button>
+        ))}
+      </div>
+      {done && <p className="text-xs text-qr-muted">Enviado al host…</p>}
+    </div>
+  );
+}
+
+function BetChoiceView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: string; myTeamIdx: number }) {
+  const [done, setDone] = useState(false);
+  const isMyTurn = myTeamIdx === gs.currentTeamIndex;
+  const currentTeam = gs.teams[gs.currentTeamIndex];
+
+  if (!isMyTurn) {
+    return <WaitingView label={`${currentTeam?.name} está apostando tiempo...`} />;
+  }
+
+  const bet = (seconds: number) => {
+    if (done) return;
+    setDone(true);
+    pushAction(room, 'bet-time', { teamIndex: myTeamIdx, seconds });
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-5 w-full">
+      <div className="text-center">
+        <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Tu turno</p>
+        <h2 className="mt-1 font-display text-2xl font-bold" style={{ color: currentTeam?.color }}>
+          Apostá tiempo
+        </h2>
+      </div>
+      <div className="flex w-full flex-col gap-3">
+        {BET_OPTIONS.map((opt) => (
+          <button
+            key={opt.seconds}
+            onClick={() => bet(opt.seconds)}
+            disabled={done}
+            className="flex items-center justify-between rounded-[20px] border border-white/10 bg-qr-card/60 px-5 py-4 transition active:scale-95 disabled:opacity-35"
+          >
+            <span className="text-xl font-black text-qr-text">{opt.label}</span>
+            <span className="text-lg font-black text-qr-yellow">{opt.points} pts</span>
+          </button>
+        ))}
+      </div>
+      {done && <p className="text-xs text-qr-muted">Enviado al host…</p>}
     </div>
   );
 }
@@ -152,11 +256,15 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
 
   return (
     <div className="flex flex-col items-center gap-6 w-full">
-      <TimerBar
-        timeLeft={timeLeft}
-        total={gs.timerDuration ?? gs.betSeconds ?? 30}
-        color={isSpeed ? '#FFD23F' : '#22D3EE'}
-      />
+      {isSpeed ? (
+        <SpeedPointsMeter timeLeft={timeLeft} />
+      ) : (
+        <TimerBar
+          timeLeft={timeLeft}
+          total={gs.timerDuration ?? gs.betSeconds ?? 30}
+          color="#22D3EE"
+        />
+      )}
 
       {eliminated ? (
         <p className="text-qr-muted text-sm text-center">Eliminado de esta ronda</p>
@@ -302,72 +410,6 @@ function ScoreArtistView({ gs }: { gs: RemoteGameState }) {
   );
 }
 
-function RoundSummaryView({ gs, room }: { gs: RemoteGameState; room: string }) {
-  const [done, setDone] = useState(false);
-  const send = (type: string) => { if (done) return; setDone(true); pushAction(room, type); };
-  const isLast = gs.round >= gs.maxRounds;
-
-  return (
-    <div className="flex flex-col items-center gap-5 w-full">
-      <p className="font-display font-black text-lg text-qr-text">
-        Ronda {gs.round}/{gs.maxRounds}
-      </p>
-      <div className="w-full max-w-xs space-y-2">
-        {[...gs.teams]
-          .sort((a, b) => b.score - a.score)
-          .map((t) => (
-            <div
-              key={t.id}
-              className="flex items-center justify-between rounded-[16px] border px-4 py-3"
-              style={{ borderColor: `${t.color}30`, background: `${t.color}0a` }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full" style={{ background: t.color }} />
-                <span className="font-bold text-qr-text">{t.name}</span>
-              </div>
-              <span className="font-black text-lg" style={{ color: t.color }}>{t.score}</span>
-            </div>
-          ))}
-      </div>
-      <div className="flex gap-2 w-full max-w-xs">
-        {!isLast && (
-          <ActionBtn label="→ Siguiente ronda" color="#22D3EE" onClick={() => send('next-round')} disabled={done} />
-        )}
-        <ActionBtn label="🏁 Terminar" color="#FF2E88" onClick={() => send('finish')} disabled={done} />
-      </div>
-      {done && <p className="text-xs text-qr-muted">Enviado al host…</p>}
-    </div>
-  );
-}
-
-function FinishedView({ gs }: { gs: RemoteGameState }) {
-  const sorted = [...gs.teams].sort((a, b) => b.score - a.score);
-  return (
-    <div className="flex flex-col items-center gap-5 w-full">
-      <p className="text-4xl">🏆</p>
-      <p className="font-display font-black text-2xl text-qr-text">
-        ¡{sorted[0]?.name} ganó!
-      </p>
-      <div className="w-full max-w-xs space-y-2">
-        {sorted.map((t, rank) => (
-          <div
-            key={t.id}
-            className="flex items-center justify-between rounded-[16px] border px-4 py-3"
-            style={{ borderColor: `${t.color}30`, background: `${t.color}0a` }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-qr-muted w-4">{rank + 1}.</span>
-              <span className="h-3 w-3 rounded-full" style={{ background: t.color }} />
-              <span className="font-bold text-qr-text">{t.name}</span>
-            </div>
-            <span className="font-black text-lg" style={{ color: t.color }}>{t.score}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function Buzz() {
@@ -475,11 +517,11 @@ export default function Buzz() {
           {gs?.phase === 'setup' && <WaitingView label="Esperando que empiece la partida..." />}
 
           {gs?.phase === 'genre-select' && (
-            <WaitingView label={`${gs.teams[gs.currentTeamIndex]?.name} está eligiendo género...`} />
+            <GenreChoiceView gs={gs} room={room} myTeamIdx={myTeamIdx} />
           )}
 
           {gs?.phase === 'bet-time' && (
-            <WaitingView label={`${gs.teams[gs.currentTeamIndex]?.name} está apostando tiempo...`} />
+            <BetChoiceView gs={gs} room={room} myTeamIdx={myTeamIdx} />
           )}
 
           {gs?.phase === 'playing' && (
@@ -503,10 +545,20 @@ export default function Buzz() {
           )}
 
           {gs?.phase === 'round-summary' && (
-            <RoundSummaryView key={`rs-${gs.round}`} gs={gs} room={room} />
+            <RoundSummary
+              key={`rs-${gs.round}`}
+              teams={gs.teams}
+              round={gs.round}
+              roundPoints={gs.roundPoints}
+              onNext={() => {}}
+              onEnd={() => {}}
+              showActions={false}
+            />
           )}
 
-          {gs?.phase === 'finished' && <FinishedView gs={gs} />}
+          {gs?.phase === 'finished' && (
+            <Finished teams={gs.teams} onNewGame={() => {}} showNewGame={false} />
+          )}
         </div>
       )}
     </div>

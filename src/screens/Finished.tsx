@@ -4,11 +4,12 @@ import type { Team } from '../types';
 interface Props {
   teams: Team[];
   onNewGame: () => void;
+  showNewGame?: boolean;
 }
 
 const CONFETTI_COLORS = ['#FF2E88', '#22D3EE', '#FFD23F', '#7CFF6B', '#FF4D4D', '#B8B3D9', '#FF2E88', '#22D3EE'];
 
-export default function Finished({ teams, onNewGame }: Props) {
+export default function Finished({ teams, onNewGame, showNewGame = true }: Props) {
   const sorted = [...teams].sort((a, b) => b.score - a.score);
   const winner = sorted[0];
 
@@ -90,13 +91,15 @@ export default function Finished({ teams, onNewGame }: Props) {
         ))}
       </div>
 
-      <button
-        onClick={onNewGame}
-        className="anim-slide-up w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
-        style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.1}s` }}
-      >
-        Nueva partida
-      </button>
+      {showNewGame && (
+        <button
+          onClick={onNewGame}
+          className="anim-slide-up w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
+          style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.1}s` }}
+        >
+          Nueva partida
+        </button>
+      )}
     </div>
   );
 }
