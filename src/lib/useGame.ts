@@ -391,14 +391,29 @@ export function useGame() {
   buzzInRef.current = buzzIn;
   // Action handler — maps remote action strings to current game functions
   // (defined after all callbacks so all fns are in scope)
+  // Phase-gated: only fire if the game is in the expected phase so a late
+  // or duplicated remote action can never corrupt the flow.
   actionHandlerRef.current = (type: string) => {
+    const phase = phaseRef.current;
     switch (type) {
-      case 'got-it':     playerGotIt(); break;
-      case 'correct':    markCorrect(); break;
-      case 'wrong':      playerDidNotGetIt(); break;
-      case 'no-score':   noScoreRound(); break;
-      case 'next-round': nextRound(); break;
-      case 'finish':     finishGame(); break;
+      case 'got-it':
+        if (phase === 'guess-prompt') playerGotIt();
+        break;
+      case 'correct':
+        if (phase === 'reveal') markCorrect();
+        break;
+      case 'wrong':
+        if (phase === 'guess-prompt' || phase === 'reveal') playerDidNotGetIt();
+        break;
+      case 'no-score':
+        if (phase === 'reveal') noScoreRound();
+        break;
+      case 'next-round':
+        if (phase === 'round-summary') nextRound();
+        break;
+      case 'finish':
+        if (phase === 'round-summary') finishGame();
+        break;
     }
   };
 

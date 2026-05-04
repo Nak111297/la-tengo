@@ -142,6 +142,10 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
     }
   };
 
+  // In knowledge mode, only the active team's phone shows the buzz button.
+  // Other phones show a listening indicator so they know the song is playing.
+  const isListening = !isSpeed && myTeamIdx !== null && myTeamIdx !== activeBuzzTeam;
+
   return (
     <div className="flex flex-col items-center gap-6 w-full">
       <TimerBar
@@ -152,6 +156,24 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
 
       {eliminated ? (
         <p className="text-qr-muted text-sm text-center">Eliminado de esta ronda</p>
+      ) : isListening ? (
+        /* Not this team's turn in knowledge mode — just show who's playing */
+        <div className="flex flex-col items-center gap-4 py-6">
+          <div className="flex items-end gap-1">
+            {[0, 0.1, 0.05, 0.15, 0.08].map((d, i) => (
+              <div
+                key={i}
+                className="w-1 rounded-full eq-bar"
+                style={{ height: '20px', background: 'linear-gradient(to top, #FF2E88, #22D3EE)', animationDelay: `${d}s` }}
+              />
+            ))}
+          </div>
+          <p className="text-sm font-bold text-qr-muted text-center">
+            {gs.stealMode
+              ? `🔥 Robo — ${gs.teams[activeBuzzTeam]?.name}`
+              : `Escuchando… turno de ${gs.teams[activeBuzzTeam]?.name}`}
+          </p>
+        </div>
       ) : (
         <>
           <button
@@ -172,13 +194,6 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
           >
             {sent ? '✓\n¡Enviado!' : buzzing ? '…' : '¡QUE\nROLÓN!'}
           </button>
-
-          {!canBuzz && !isSpeed && myTeamIdx !== activeBuzzTeam && (
-            <p className="text-xs text-qr-muted text-center">
-              {gs.stealMode ? '🔥 Robo — ' : 'Turno de '}
-              {gs.teams[activeBuzzTeam]?.name}
-            </p>
-          )}
 
           {err && <p className="text-sm text-qr-red text-center">{err}</p>}
         </>
