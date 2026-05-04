@@ -6,11 +6,15 @@ import type { SessionTeam, RemoteGameState } from '../lib/firebase';
 function useRemoteTimer(gs: RemoteGameState | null) {
   const [timeLeft, setTimeLeft] = useState(0);
   const rafRef = useRef<number | null>(null);
+  const timerStartedAt = gs?.timerStartedAt ?? null;
+  const timerDuration = gs?.timerDuration ?? null;
 
   useEffect(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    if (!gs?.timerStartedAt || !gs.timerDuration) { setTimeLeft(0); return; }
-    const { timerStartedAt, timerDuration } = gs;
+    if (!timerStartedAt || !timerDuration) {
+      rafRef.current = requestAnimationFrame(() => setTimeLeft(0));
+      return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    }
     const tick = () => {
       const elapsed = (Date.now() - timerStartedAt) / 1000;
       const remaining = Math.max(timerDuration - elapsed, 0);
@@ -19,7 +23,7 @@ function useRemoteTimer(gs: RemoteGameState | null) {
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [gs?.timerStartedAt, gs?.timerDuration]);
+  }, [timerStartedAt, timerDuration]);
 
   return timeLeft;
 }

@@ -36,9 +36,9 @@ export async function createSession(
   if (!DB_URL) return;
   // pendingAction starts null so subscribing hosts never fire on stale actions
   await fetch(`${DB_URL}/sessions/${code}.json`, {
-    method: 'PUT',
+    method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teams, activeBuzz: null, pendingAction: null, gameState: null, createdAt: Date.now() }),
+    body: JSON.stringify({ teams, activeBuzz: null, pendingAction: null, createdAt: Date.now() }),
   });
 }
 
@@ -184,7 +184,7 @@ export async function pushAction(code: string, type: string): Promise<void> {
 export function subscribeAction(
   code: string,
   onAction: (type: string) => void,
-  notBefore = 0,
+  notBefore = Date.now(),
 ): () => void {
   if (!DB_URL) return () => {};
   const es = new EventSource(`${DB_URL}/sessions/${code}/pendingAction.json?sse=true`);

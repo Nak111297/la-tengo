@@ -80,9 +80,10 @@ export function useGame() {
   const sessionCodeRef = useRef<string | null>(null);
   const phaseRef = useRef<GameState['phase']>('setup');
   const currentTeamIndexRef = useRef(0);
+  const stealTeamIndexRef = useRef<number | null>(null);
   const speedEliminatedTeamsRef = useRef<number[]>([]);
   const buzzInRef = useRef<(teamIndexOverride?: number) => void>(() => {});
-  // Action handler ref — updated each render so the subscribeAction closure always sees fresh fns
+  // Action handler ref keeps the Firebase listener connected to current callbacks.
   const actionHandlerRef = useRef<(type: string) => void>(() => {});
 
   // Timer tracking for remote state sync
@@ -156,7 +157,7 @@ export function useGame() {
     }
 
     update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1, maxRounds, gameMode, songSource, multiphone, sessionCode: code });
-  }, [update]);
+  }, [update, setSessionCode]);
 
   const selectGenre = useCallback(async (genre: string): Promise<string | null> => {
     clearTimers();
@@ -238,9 +239,9 @@ export function useGame() {
       const pts = Math.round((timeLeftRef.current / SPEED_DURATION) * 100);
       setState(prev => ({
         ...prev,
-        currentTeamIndex: teamIndexOverride !== undefined ? teamIndexOverride : prev.currentTeamIndex,
         phase: 'guess-prompt',
         speedPoints: pts,
+        speedScoringTeamIndex: teamIndexOverride ?? null,
       }));
     } else {
       // Knowledge: go to guess-prompt, enable replay, start 30s auto-fail timer
@@ -255,7 +256,7 @@ export function useGame() {
         playerDidNotGetItRef.current();
       });
     }
-  }, [clearTimers, startCountdown]);
+  }, [clearTimers, startCountdown, setCanReplay]);
 
   const replaySong = useCallback(async () => {
     setCanReplay(false);
@@ -274,7 +275,7 @@ export function useGame() {
         playerDidNotGetItRef.current();
       });
     });
-  }, [clearTimers, startCountdown, update]);
+  }, [clearTimers, startCountdown, update, setCanReplay]);
 
   const playerGotIt = useCallback((teamIdx?: number) => {
     // Stop the 30s auto-fail timer — player claimed the answer, timer no longer needed
@@ -384,108 +385,7 @@ export function useGame() {
     } else {
       stealModeRef.current = false;
     }
-  }, [clearTimers, startCountdown, update]);
-
-  // Keep refs current every render
-  playerDidNotGetItRef.current = playerDidNotGetIt;
-  buzzInRef.current = buzzIn;
-  // Action handler — maps remote action strings to current game functions
-  // (defined after all callbacks so all fns are in scope)
-  // Phase-gated: only fire if the game is in the expected phase so a late
-  // or duplicated remote action can never corrupt the flow.
-  actionHandlerRef.current = (type: string) => {
-    const phase = phaseRef.current;
-    switch (type) {
-      case 'got-it':
-        if (phase === 'guess-prompt') playerGotIt();
-        break;
-      case 'correct':
-        if (phase === 'reveal') markCorrect();
-        break;
-      case 'wrong':
-        if (phase === 'guess-prompt' || phase === 'reveal') playerDidNotGetIt();
-        break;
-      case 'no-score':
-        if (phase === 'reveal') noScoreRound();
-        break;
-      case 'next-round':
-        if (phase === 'round-summary') nextRound();
-        break;
-      case 'finish':
-        if (phase === 'round-summary') finishGame();
-        break;
-    }
-  };
-
-  // Sync phase / team refs for use inside the Firebase closure
-  useEffect(() => { phaseRef.current = state.phase; }, [state.phase]);
-  useEffect(() => { currentTeamIndexRef.current = state.currentTeamIndex; }, [state.currentTeamIndex]);
-  useEffect(() => { speedEliminatedTeamsRef.current = state.speedEliminatedTeams; }, [state.speedEliminatedTeams]);
-
-  // Push full game state to Firebase whenever state or timer changes
-  useEffect(() => {
-    const code = sessionCodeRef.current;
-    if (!code || !isFirebaseReady()) return;
-    const gs: RemoteGameState = {
-      phase: state.phase,
-      teams: state.teams.map(t => ({ id: t.id, name: t.name, color: t.color, score: t.score })),
-      currentTeamIndex: state.currentTeamIndex,
-      round: state.round,
-      maxRounds: state.maxRounds,
-      betSeconds: state.betSeconds,
-      timerStartedAt: timerStartedAtRef.current,
-      timerDuration: timerDurationRef.current,
-      stealMode: state.stealMode,
-      stealTeamIndex: state.stealTeamIndex,
-      currentTrack: state.currentTrack
-        ? { name: state.currentTrack.name, artist: state.currentTrack.artist, albumArt: state.currentTrack.albumArt, year: state.currentTrack.year }
-        : null,
-      gameMode: state.gameMode,
-      speedPoints: state.speedPoints,
-      noneScored: state.noneScored,
-      speedScoringTeamIndex: state.speedScoringTeamIndex,
-      speedEliminatedTeams: state.speedEliminatedTeams,
-      roundPoints: state.roundPoints,
-    };
-    pushGameState(code, gs);
-  // timerSyncTick ensures this runs when timer starts/stops even if state didn't change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, timerSyncTick]);
-
-  // Subscribe to actions pushed from remote phones.
-  // notBefore = Date.now() ensures we never fire on stale actions that were
-  // left in Firebase from a previous round or session.
-  useEffect(() => {
-    if (!sessionCode) return;
-    const notBefore = Date.now();
-    return subscribeAction(sessionCode, (type) => {
-      actionHandlerRef.current(type);
-    }, notBefore);
-  }, [sessionCode]);
-
-  // Firebase buzz listener — active only when multiphone session is live
-  useEffect(() => {
-    const code = sessionCodeRef.current;
-    if (!code) return;
-    return subscribeBuzz(code, (teamIndex: number) => {
-      // Clear the buzz immediately so next buzz can come through
-      clearBuzz(code);
-      const phase = phaseRef.current;
-      if (phase !== 'playing') return;
-      if (gameModeRef.current === 'knowledge') {
-        // Only the current team can buzz in knowledge mode
-        if (teamIndex === currentTeamIndexRef.current) {
-          buzzInRef.current(teamIndex);
-        }
-      } else {
-        // Speed: any non-eliminated team can buzz
-        if (!speedEliminatedTeamsRef.current.includes(teamIndex)) {
-          buzzInRef.current(teamIndex);
-        }
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionCode]);
+  }, [clearTimers, startCountdown, update, setCanReplay]);
 
   const noScoreRound = useCallback(() => {
     clearTimers();
@@ -561,7 +461,107 @@ export function useGame() {
     setCanReplay(false);
     setSessionCode(null);
     setState(INITIAL_STATE);
-  }, [clearTimers]);
+  }, [clearTimers, setCanReplay, setSessionCode]);
+
+  useEffect(() => {
+    playerDidNotGetItRef.current = playerDidNotGetIt;
+  }, [playerDidNotGetIt]);
+
+  useEffect(() => {
+    buzzInRef.current = buzzIn;
+  }, [buzzIn]);
+
+  // Sync phase / team refs for use inside Firebase callbacks.
+  useEffect(() => {
+    phaseRef.current = state.phase;
+    currentTeamIndexRef.current = state.currentTeamIndex;
+    stealTeamIndexRef.current = state.stealTeamIndex;
+    speedEliminatedTeamsRef.current = state.speedEliminatedTeams;
+  }, [state.phase, state.currentTeamIndex, state.stealTeamIndex, state.speedEliminatedTeams]);
+
+  // Remote phone actions control the host only when the host is already in the
+  // matching phase. Late or duplicate actions are ignored.
+  useEffect(() => {
+    actionHandlerRef.current = (type: string) => {
+      const phase = phaseRef.current;
+      switch (type) {
+        case 'got-it':
+          if (phase === 'guess-prompt') playerGotIt();
+          break;
+        case 'correct':
+          if (phase === 'reveal') markCorrect();
+          break;
+        case 'wrong':
+          if (phase === 'guess-prompt' || phase === 'reveal') playerDidNotGetIt();
+          break;
+        case 'no-score':
+          if (phase === 'reveal') noScoreRound();
+          break;
+        case 'next-round':
+          if (phase === 'round-summary') nextRound();
+          break;
+        case 'finish':
+          if (phase === 'round-summary') finishGame();
+          break;
+      }
+    };
+  }, [playerGotIt, markCorrect, playerDidNotGetIt, noScoreRound, nextRound, finishGame]);
+
+  // Push full game state to Firebase whenever state or timer changes.
+  useEffect(() => {
+    const code = sessionCodeRef.current;
+    if (!code || !isFirebaseReady()) return;
+    const gs: RemoteGameState = {
+      phase: state.phase,
+      teams: state.teams.map(t => ({ id: t.id, name: t.name, color: t.color, score: t.score })),
+      currentTeamIndex: state.currentTeamIndex,
+      round: state.round,
+      maxRounds: state.maxRounds,
+      betSeconds: state.betSeconds,
+      timerStartedAt: timerStartedAtRef.current,
+      timerDuration: timerDurationRef.current,
+      stealMode: state.stealMode,
+      stealTeamIndex: state.stealTeamIndex,
+      currentTrack: state.currentTrack
+        ? { name: state.currentTrack.name, artist: state.currentTrack.artist, albumArt: state.currentTrack.albumArt, year: state.currentTrack.year }
+        : null,
+      gameMode: state.gameMode,
+      speedPoints: state.speedPoints,
+      noneScored: state.noneScored,
+      speedScoringTeamIndex: state.speedScoringTeamIndex,
+      speedEliminatedTeams: state.speedEliminatedTeams,
+      roundPoints: state.roundPoints,
+    };
+    pushGameState(code, gs);
+  }, [state, timerSyncTick]);
+
+  // Subscribe to actions pushed from remote phones.
+  useEffect(() => {
+    if (!sessionCode) return;
+    return subscribeAction(sessionCode, (type) => {
+      actionHandlerRef.current(type);
+    });
+  }, [sessionCode]);
+
+  // Firebase buzz listener: active only when a multiphone session is live.
+  useEffect(() => {
+    if (!sessionCode) return;
+    return subscribeBuzz(sessionCode, (teamIndex: number) => {
+      clearBuzz(sessionCode);
+      const phase = phaseRef.current;
+      if (phase !== 'playing') return;
+      if (gameModeRef.current === 'knowledge') {
+        const activeTeamIndex = stealModeRef.current
+          ? stealTeamIndexRef.current
+          : currentTeamIndexRef.current;
+        if (teamIndex === activeTeamIndex) {
+          buzzInRef.current(teamIndex);
+        }
+      } else if (!speedEliminatedTeamsRef.current.includes(teamIndex)) {
+        buzzInRef.current(teamIndex);
+      }
+    });
+  }, [sessionCode]);
 
   return {
     state,
