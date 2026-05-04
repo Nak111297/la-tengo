@@ -9,12 +9,13 @@ interface Props {
   stealTeam: Team | null;
   betSeconds: number;
   onConfirm: (gotArtist: boolean, gotSong: boolean) => void;
+  onBack: () => void;
   gameMode?: 'knowledge' | 'speed';
   speedPoints?: number | null;
   speedScoringTeamIndex?: number | null;
 }
 
-export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, betSeconds, onConfirm, gameMode, speedPoints, speedScoringTeamIndex }: Props) {
+export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, betSeconds, onConfirm, onBack, gameMode, speedPoints, speedScoringTeamIndex }: Props) {
   const [gotArtist, setGotArtist] = useState(false);
 
   const isSpeed = gameMode === 'speed';
@@ -62,6 +63,13 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
         className="w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
       >
         Confirmar puntos
+      </button>
+
+      <button
+        onClick={onBack}
+        className="w-full max-w-sm rounded-full border border-white/15 py-3 text-sm font-bold text-qr-muted transition hover:border-qr-cyan hover:text-qr-cyan active:scale-95"
+      >
+        Regresar
       </button>
 
       <div className="w-full max-w-sm rounded-[24px] border border-white/10 bg-qr-card/60 p-4">

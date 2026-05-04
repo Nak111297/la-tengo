@@ -231,8 +231,10 @@ export function useGame() {
     });
   }, [update, clearTimers, startCountdown]);
 
-  const buzzIn = useCallback(async (teamIndexOverride?: number) => {
-    if (!debugModeRef.current && gameModeRef.current !== 'speed') await pauseSong();
+  const buzzIn = useCallback((teamIndexOverride?: number) => {
+    if (!debugModeRef.current && gameModeRef.current !== 'speed') {
+      pauseSong().catch(() => {});
+    }
     // Save remaining time before clearing; clearTimers resets the timer refs.
     const speedRemaining = timeLeftRef.current;
     if (gameModeRef.current === 'speed') {
@@ -299,9 +301,19 @@ export function useGame() {
 
   const markCorrect = useCallback(() => {
     clearTimers(); // ensure no stale auto-fail timer survives into score-artist
-    playCurrentTrack().catch(() => {});
-    update({ phase: 'score-artist' });
+    playCurrentTrack()
+      .catch(() => {})
+      .finally(() => update({ phase: 'score-artist' }));
   }, [clearTimers, playCurrentTrack, update]);
+
+  const backToAnswerCheck = useCallback(() => {
+    clearTimers();
+    if (gameModeRef.current === 'speed') {
+      update({ phase: 'guess-prompt' });
+      return;
+    }
+    update({ phase: 'reveal' });
+  }, [clearTimers, update]);
 
   const playerDidNotGetIt = useCallback(() => {
     clearTimers();
@@ -588,6 +600,7 @@ export function useGame() {
     markCorrect,
     playerDidNotGetIt,
     confirmCorrect,
+    backToAnswerCheck,
     nextRound,
     skipSong,
     resetGame,

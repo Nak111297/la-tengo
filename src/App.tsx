@@ -27,7 +27,7 @@ export default function App() {
     state, timeLeft, canReplay, sessionCode,
     startGame, selectGenre, betAndPlay,
     buzzIn, replaySong, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
-    confirmCorrect, nextRound, skipSong, resetGame, finishGame,
+    confirmCorrect, backToAnswerCheck, nextRound, skipSong, resetGame, finishGame,
   } = useGame();
 
   useEffect(() => {
@@ -257,6 +257,7 @@ export default function App() {
             gameMode={state.gameMode}
             speedPoints={state.speedPoints}
             speedScoringTeamIndex={state.speedScoringTeamIndex}
+            onBack={backToAnswerCheck}
           />
         )}
 
