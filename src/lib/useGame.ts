@@ -291,15 +291,17 @@ export function useGame() {
     }
   }, [clearTimers, update]);
 
+  const playCurrentTrack = useCallback(async () => {
+    if (debugModeRef.current || gameModeRef.current !== 'knowledge') return;
+    const track = tracksRef.current[trackIndexRef.current];
+    if (track) await playSong(track.uri);
+  }, []);
+
   const markCorrect = useCallback(() => {
     clearTimers(); // ensure no stale auto-fail timer survives into score-artist
+    playCurrentTrack().catch(() => {});
     update({ phase: 'score-artist' });
-    // Knowledge mode: replay the song so there's background music during score check
-    if (!debugModeRef.current && gameModeRef.current === 'knowledge') {
-      const track = tracksRef.current[trackIndexRef.current];
-      if (track) playSong(track.uri).catch(() => {});
-    }
-  }, [clearTimers, update]);
+  }, [clearTimers, playCurrentTrack, update]);
 
   const playerDidNotGetIt = useCallback(() => {
     clearTimers();
@@ -351,6 +353,7 @@ export function useGame() {
     // ── Knowledge mode ────────────────────────────────────────────────────────
     // Capture steal state BEFORE setState so we know which branch fired
     const wasInStealMode = stealModeRef.current;
+    playCurrentTrack().catch(() => {});
 
     setState((prev) => {
       if (prev.stealMode) {
@@ -369,7 +372,6 @@ export function useGame() {
       const track = tracksRef.current[trackIndexRef.current];
       if (track) {
         (async () => {
-          if (!debugModeRef.current) await playSong(track.uri);
           startCountdown(30, async () => {
             if (!debugModeRef.current) await pauseSong();
             clearTimers();
@@ -392,7 +394,7 @@ export function useGame() {
     } else {
       stealModeRef.current = false;
     }
-  }, [clearTimers, startCountdown, update, setCanReplay]);
+  }, [clearTimers, playCurrentTrack, startCountdown, update, setCanReplay]);
 
   const noScoreRound = useCallback(() => {
     clearTimers();
