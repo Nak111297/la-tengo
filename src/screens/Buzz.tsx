@@ -250,9 +250,7 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
     }
   };
 
-  // In knowledge mode, only the active team's phone shows the buzz button.
-  // Other phones show a listening indicator so they know the song is playing.
-  const isListening = !isSpeed && myTeamIdx !== null && myTeamIdx !== activeBuzzTeam;
+  const isWaitingTurn = !isSpeed && myTeamIdx !== null && myTeamIdx !== activeBuzzTeam;
 
   return (
     <div className="flex flex-col items-center gap-6 w-full">
@@ -268,23 +266,14 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
 
       {eliminated ? (
         <p className="text-qr-muted text-sm text-center">Eliminado de esta ronda</p>
-      ) : isListening ? (
-        /* Not this team's turn in knowledge mode — just show who's playing */
-        <div className="flex flex-col items-center gap-4 py-6">
-          <div className="flex items-end gap-1">
-            {[0, 0.1, 0.05, 0.15, 0.08].map((d, i) => (
-              <div
-                key={i}
-                className="w-1 rounded-full eq-bar"
-                style={{ height: '20px', background: 'linear-gradient(to top, #FF2E88, #22D3EE)', animationDelay: `${d}s` }}
-              />
-            ))}
-          </div>
+      ) : isWaitingTurn ? (
+        <div className="flex flex-col items-center gap-2 py-6">
           <p className="text-sm font-bold text-qr-muted text-center">
             {gs.stealMode
-              ? `🔥 Robo — ${gs.teams[activeBuzzTeam]?.name}`
-              : `Escuchando… turno de ${gs.teams[activeBuzzTeam]?.name}`}
+              ? `Robo de ${gs.teams[activeBuzzTeam]?.name}`
+              : `Turno de ${gs.teams[activeBuzzTeam]?.name}`}
           </p>
+          <p className="text-xs text-qr-muted/60 text-center">Esperando tu turno para responder</p>
         </div>
       ) : (
         <>
@@ -314,13 +303,17 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
   );
 }
 
-function GuessPromptView({ gs, room }: { gs: RemoteGameState; room: string }) {
+function GuessPromptView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: string; myTeamIdx: number }) {
   const [done, setDone] = useState(false);
   const send = (type: string) => { if (done) return; setDone(true); pushAction(room, type); };
 
+  const activeTeamIdx = gs.stealMode
+    ? (gs.stealTeamIndex ?? gs.currentTeamIndex)
+    : gs.currentTeamIndex;
   const team = gs.stealMode
     ? gs.teams[gs.stealTeamIndex ?? 0]
     : gs.teams[gs.currentTeamIndex];
+  const isMyTurn = myTeamIdx === activeTeamIdx;
 
   return (
     <div className="flex flex-col items-center gap-6 w-full">
@@ -331,12 +324,18 @@ function GuessPromptView({ gs, room }: { gs: RemoteGameState; room: string }) {
         {gs.stealMode ? `🔥 Robo — ${team?.name}` : team?.name}
       </div>
 
-      <p className="text-qr-muted text-sm text-center">¿Lo saben?</p>
+      <p className="text-qr-muted text-sm text-center">
+        {isMyTurn ? '¿Lo saben?' : 'Esperando respuesta'}
+      </p>
 
-      <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-        <ActionBtn label="✓ Lo saben" color="#22c55e" onClick={() => send('got-it')} disabled={done} />
-        <ActionBtn label="✗ No saben" color="#FF2E88" onClick={() => send('wrong')} disabled={done} />
-      </div>
+      {isMyTurn ? (
+        <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+          <ActionBtn label="✓ Lo saben" color="#22c55e" onClick={() => send('got-it')} disabled={done} />
+          <ActionBtn label="✗ No saben" color="#FF2E88" onClick={() => send('wrong')} disabled={done} />
+        </div>
+      ) : (
+        <WaitingView label={`${team?.name} está respondiendo...`} />
+      )}
 
       {done && <p className="text-xs text-qr-muted">Enviado al host…</p>}
     </div>
@@ -533,7 +532,7 @@ export default function Buzz() {
 
           {gs?.phase === 'guess-prompt' && (
             // Key on phase+round so state resets each new prompt
-            <GuessPromptView key={`gp-${gs.round}`} gs={gs} room={room} />
+            <GuessPromptView key={`gp-${gs.round}`} gs={gs} room={room} myTeamIdx={myTeamIdx} />
           )}
 
           {gs?.phase === 'reveal' && (
