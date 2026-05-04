@@ -34,10 +34,11 @@ export async function createSession(
   teams: SessionTeam[],
 ): Promise<void> {
   if (!DB_URL) return;
+  // pendingAction starts null so subscribing hosts never fire on stale actions
   await fetch(`${DB_URL}/sessions/${code}.json`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teams, activeBuzz: null, createdAt: Date.now() }),
+    body: JSON.stringify({ teams, activeBuzz: null, pendingAction: null, gameState: null, createdAt: Date.now() }),
   });
 }
 
@@ -109,6 +110,42 @@ export async function pushGameState(code: string, gs: RemoteGameState): Promise<
   });
 }
 
+/**
+ * Firebase stores empty arrays as null and non-empty arrays as objects with
+ * numeric keys ({"0":…,"1":…}).  This helper always returns a real JS array.
+ */
+function toArray<T>(val: unknown): T[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val as T[];
+  if (typeof val === 'object') return Object.values(val as object) as T[];
+  return [];
+}
+
+/** Normalize Firebase's quirky array-as-object / null-as-empty-array behavior. */
+function normalizeRemoteState(raw: unknown): RemoteGameState {
+  const r = raw as Record<string, unknown>;
+  type Team = RemoteGameState['teams'][0];
+  return {
+    phase:                (r.phase as string)                           ?? 'setup',
+    teams:                toArray<Team>(r.teams),
+    currentTeamIndex:     (r.currentTeamIndex as number)                ?? 0,
+    round:                (r.round as number)                           ?? 1,
+    maxRounds:            (r.maxRounds as number)                       ?? 10,
+    betSeconds:           (r.betSeconds as number | null)               ?? null,
+    timerStartedAt:       (r.timerStartedAt as number | null)           ?? null,
+    timerDuration:        (r.timerDuration as number | null)            ?? null,
+    stealMode:            (r.stealMode as boolean)                      ?? false,
+    stealTeamIndex:       (r.stealTeamIndex as number | null)           ?? null,
+    currentTrack:         (r.currentTrack as RemoteGameState['currentTrack']) ?? null,
+    gameMode:             (r.gameMode as string)                        ?? 'knowledge',
+    speedPoints:          (r.speedPoints as number | null)              ?? null,
+    noneScored:           (r.noneScored as boolean)                     ?? false,
+    speedScoringTeamIndex:(r.speedScoringTeamIndex as number | null)    ?? null,
+    speedEliminatedTeams: toArray<number>(r.speedEliminatedTeams),
+    roundPoints:          (r.roundPoints as Record<string, number>)     ?? {},
+  };
+}
+
 export function subscribeGameState(
   code: string,
   onState: (s: RemoteGameState) => void,
@@ -118,13 +155,13 @@ export function subscribeGameState(
   const handle = (e: MessageEvent) => {
     try {
       const payload = JSON.parse(e.data as string) as { data: unknown };
+      // Only process full-object 'put' events (partial 'patch' would break state shape)
       if (payload.data && typeof payload.data === 'object') {
-        onState(payload.data as RemoteGameState);
+        onState(normalizeRemoteState(payload.data));
       }
     } catch { /* ignore */ }
   };
   es.addEventListener('put', handle);
-  es.addEventListener('patch', handle);
   return () => es.close();
 }
 
@@ -139,13 +176,19 @@ export async function pushAction(code: string, type: string): Promise<void> {
   });
 }
 
+/**
+ * @param notBefore - unix ms. Actions with ts ≤ this value are silently
+ *   ignored, preventing stale events from a previous game/round being
+ *   replayed the moment the host subscribes.
+ */
 export function subscribeAction(
   code: string,
   onAction: (type: string) => void,
+  notBefore = 0,
 ): () => void {
   if (!DB_URL) return () => {};
   const es = new EventSource(`${DB_URL}/sessions/${code}/pendingAction.json?sse=true`);
-  let lastTs = 0;
+  let lastTs = notBefore; // seed with subscription time to skip old events
   const handle = (e: MessageEvent) => {
     try {
       const payload = JSON.parse(e.data as string) as { data: unknown };
@@ -157,7 +200,6 @@ export function subscribeAction(
     } catch { /* ignore */ }
   };
   es.addEventListener('put', handle);
-  es.addEventListener('patch', handle);
   return () => es.close();
 }
 
@@ -175,7 +217,7 @@ export function subscribeTeams(
   const handle = (e: MessageEvent) => {
     try {
       const payload = JSON.parse(e.data as string) as { data: unknown };
-      if (Array.isArray(payload.data)) onChange(payload.data as SessionTeam[]);
+      if (payload.data) onChange(toArray<SessionTeam>(payload.data));
     } catch { /* ignore */ }
   };
   es.addEventListener('put', handle);

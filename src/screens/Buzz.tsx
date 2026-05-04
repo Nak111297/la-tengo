@@ -115,11 +115,15 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
   const [err, setErr] = useState<string | null>(null);
   const isSpeed = gs.gameMode === 'speed';
   const team = myTeamIdx !== null ? gs.teams[myTeamIdx] : null;
-  const eliminated = myTeamIdx !== null && gs.speedEliminatedTeams.includes(myTeamIdx);
+  // Firebase may return [] as null — always treat as array (firebase.ts normalizes, but belt-and-suspenders)
+  const eliminated = myTeamIdx !== null && (gs.speedEliminatedTeams ?? []).includes(myTeamIdx);
 
-  // In knowledge mode, only the current team's phone should buzz
+  // In knowledge mode the active team changes during steal — use stealTeamIndex if in steal mode
+  const activeBuzzTeam = gs.stealMode
+    ? (gs.stealTeamIndex ?? gs.currentTeamIndex)
+    : gs.currentTeamIndex;
   const canBuzz = myTeamIdx !== null && !eliminated && !sent && (
-    isSpeed ? true : myTeamIdx === gs.currentTeamIndex
+    isSpeed ? true : myTeamIdx === activeBuzzTeam
   );
 
   const handleBuzz = async () => {
@@ -169,9 +173,10 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
             {sent ? '✓\n¡Enviado!' : buzzing ? '…' : '¡QUE\nROLÓN!'}
           </button>
 
-          {!canBuzz && !isSpeed && myTeamIdx !== gs.currentTeamIndex && (
+          {!canBuzz && !isSpeed && myTeamIdx !== activeBuzzTeam && (
             <p className="text-xs text-qr-muted text-center">
-              Turno de {gs.teams[gs.currentTeamIndex]?.name}
+              {gs.stealMode ? '🔥 Robo — ' : 'Turno de '}
+              {gs.teams[activeBuzzTeam]?.name}
             </p>
           )}
 
@@ -250,33 +255,30 @@ function RevealView({ gs, room }: { gs: RemoteGameState; room: string }) {
   );
 }
 
-function ScoreArtistView({ gs, room }: { gs: RemoteGameState; room: string }) {
-  const [done, setDone] = useState(false);
-  const send = (type: string) => { if (done) return; setDone(true); pushAction(room, type); };
-
+function ScoreArtistView({ gs }: { gs: RemoteGameState }) {
+  // The host's ScoreCheck screen handles the got-artist/got-song checkboxes.
+  // Remote just shows who is being scored while the host confirms.
   const scoringIdx = gs.gameMode === 'speed'
     ? (gs.speedScoringTeamIndex ?? gs.currentTeamIndex)
     : (gs.stealMode ? (gs.stealTeamIndex ?? 0) : gs.currentTeamIndex);
   const team = gs.teams[scoringIdx];
 
   return (
-    <div className="flex flex-col items-center gap-5 w-full">
-      <p className="text-qr-muted text-sm text-center">
-        ¿Nombró artista y canción?
-      </p>
+    <div className="flex flex-col items-center gap-4 py-6 w-full">
+      <p className="text-qr-muted text-sm text-center">El host está verificando la respuesta…</p>
       {team && (
         <div
-          className="rounded-full px-4 py-1.5 text-sm font-bold border"
+          className="rounded-full px-5 py-2 border font-bold text-sm"
           style={{ color: team.color, borderColor: `${team.color}50`, background: `${team.color}15` }}
         >
           {team.name}
         </div>
       )}
-
-      {/* The host screen handles the got-artist/got-song checkboxes;
-          remote just sends a confirm to advance */}
-      <ActionBtn label="✓ Confirmar" color="#22D3EE" onClick={() => send('confirm')} disabled={done} />
-      {done && <p className="text-xs text-qr-muted">Enviado al host…</p>}
+      {gs.currentTrack && (
+        <p className="text-xs text-qr-muted text-center">
+          {gs.currentTrack.artist} — {gs.currentTrack.name}
+        </p>
+      )}
     </div>
   );
 }
@@ -462,7 +464,10 @@ export default function Buzz() {
           )}
 
           {gs?.phase === 'playing' && (
-            <PlayingView gs={gs} room={room} myTeamIdx={myTeamIdx} timeLeft={timeLeft} />
+            <PlayingView
+              key={`pl-${gs.round}-${gs.stealMode ? 'steal' : gs.currentTeamIndex}-${(gs.speedEliminatedTeams ?? []).length}`}
+              gs={gs} room={room} myTeamIdx={myTeamIdx} timeLeft={timeLeft}
+            />
           )}
 
           {gs?.phase === 'guess-prompt' && (
@@ -475,7 +480,7 @@ export default function Buzz() {
           )}
 
           {gs?.phase === 'score-artist' && (
-            <ScoreArtistView key={`sa-${gs.round}`} gs={gs} room={room} />
+            <ScoreArtistView key={`sa-${gs.round}`} gs={gs} />
           )}
 
           {gs?.phase === 'round-summary' && (

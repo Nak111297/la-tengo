@@ -437,12 +437,15 @@ export function useGame() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, timerSyncTick]);
 
-  // Subscribe to actions pushed from remote phones
+  // Subscribe to actions pushed from remote phones.
+  // notBefore = Date.now() ensures we never fire on stale actions that were
+  // left in Firebase from a previous round or session.
   useEffect(() => {
     if (!sessionCode) return;
+    const notBefore = Date.now();
     return subscribeAction(sessionCode, (type) => {
       actionHandlerRef.current(type);
-    });
+    }, notBefore);
   }, [sessionCode]);
 
   // Firebase buzz listener — active only when multiphone session is live
