@@ -76,6 +76,91 @@ export function subscribeBuzz(
   return () => es.close();
 }
 
+// ── Remote game state (host → players) ───────────────────────────────────────
+
+export interface RemoteGameState {
+  phase: string;
+  teams: Array<{ id: string; name: string; color: string; score: number }>;
+  currentTeamIndex: number;
+  round: number;
+  maxRounds: number;
+  betSeconds: number | null;
+  /** unix ms when the current countdown started (null = no active timer) */
+  timerStartedAt: number | null;
+  /** total seconds for the current countdown */
+  timerDuration: number | null;
+  stealMode: boolean;
+  stealTeamIndex: number | null;
+  currentTrack: { name: string; artist: string; albumArt: string; year?: number } | null;
+  gameMode: string;
+  speedPoints: number | null;
+  noneScored: boolean;
+  speedScoringTeamIndex: number | null;
+  speedEliminatedTeams: number[];
+  roundPoints: Record<string, number>;
+}
+
+export async function pushGameState(code: string, gs: RemoteGameState): Promise<void> {
+  if (!DB_URL) return;
+  await fetch(`${DB_URL}/sessions/${code}/gameState.json`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(gs),
+  });
+}
+
+export function subscribeGameState(
+  code: string,
+  onState: (s: RemoteGameState) => void,
+): () => void {
+  if (!DB_URL) return () => {};
+  const es = new EventSource(`${DB_URL}/sessions/${code}/gameState.json?sse=true`);
+  const handle = (e: MessageEvent) => {
+    try {
+      const payload = JSON.parse(e.data as string) as { data: unknown };
+      if (payload.data && typeof payload.data === 'object') {
+        onState(payload.data as RemoteGameState);
+      }
+    } catch { /* ignore */ }
+  };
+  es.addEventListener('put', handle);
+  es.addEventListener('patch', handle);
+  return () => es.close();
+}
+
+// ── Remote actions (players → host) ──────────────────────────────────────────
+
+export async function pushAction(code: string, type: string): Promise<void> {
+  if (!DB_URL) return;
+  await fetch(`${DB_URL}/sessions/${code}/pendingAction.json`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, ts: Date.now() }),
+  });
+}
+
+export function subscribeAction(
+  code: string,
+  onAction: (type: string) => void,
+): () => void {
+  if (!DB_URL) return () => {};
+  const es = new EventSource(`${DB_URL}/sessions/${code}/pendingAction.json?sse=true`);
+  let lastTs = 0;
+  const handle = (e: MessageEvent) => {
+    try {
+      const payload = JSON.parse(e.data as string) as { data: unknown };
+      const val = payload.data as { type: string; ts: number } | null;
+      if (val && typeof val.type === 'string' && val.ts > lastTs) {
+        lastTs = val.ts;
+        onAction(val.type);
+      }
+    } catch { /* ignore */ }
+  };
+  es.addEventListener('put', handle);
+  es.addEventListener('patch', handle);
+  return () => es.close();
+}
+
 // ── Player helpers ────────────────────────────────────────────────────────────
 
 /** Subscribe to the team list on the /buzz page. */

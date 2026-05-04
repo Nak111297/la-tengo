@@ -9,6 +9,9 @@ import {
   subscribeBuzz,
   clearBuzz,
   isFirebaseReady,
+  pushGameState,
+  subscribeAction,
+  type RemoteGameState,
 } from './firebase';
 
 const DEBUG_TRACKS: TrackInfo[] = [
@@ -79,6 +82,14 @@ export function useGame() {
   const currentTeamIndexRef = useRef(0);
   const speedEliminatedTeamsRef = useRef<number[]>([]);
   const buzzInRef = useRef<(teamIndexOverride?: number) => void>(() => {});
+  // Action handler ref — updated each render so the subscribeAction closure always sees fresh fns
+  const actionHandlerRef = useRef<(type: string) => void>(() => {});
+
+  // Timer tracking for remote state sync
+  const timerStartedAtRef = useRef<number | null>(null);
+  const timerDurationRef = useRef<number | null>(null);
+  // Incrementing this triggers the remote-push effect when timer starts/stops
+  const [timerSyncTick, setTimerSyncTick] = useState(0);
 
   const [timerRunning, setTimerRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -95,9 +106,15 @@ export function useGame() {
     timerRef.current = null;
     intervalRef.current = null;
     setTimerRunning(false);
+    timerStartedAtRef.current = null;
+    timerDurationRef.current = null;
+    setTimerSyncTick(v => v + 1);
   }, []);
 
   const startCountdown = useCallback((seconds: number, onEnd: () => void) => {
+    timerStartedAtRef.current = Date.now();
+    timerDurationRef.current = seconds;
+    setTimerSyncTick(v => v + 1);
     timeLeftRef.current = seconds;
     setTimeLeft(seconds);
     setTimerRunning(true);
@@ -372,11 +389,61 @@ export function useGame() {
   // Keep refs current every render
   playerDidNotGetItRef.current = playerDidNotGetIt;
   buzzInRef.current = buzzIn;
+  // Action handler — maps remote action strings to current game functions
+  // (defined after all callbacks so all fns are in scope)
+  actionHandlerRef.current = (type: string) => {
+    switch (type) {
+      case 'got-it':     playerGotIt(); break;
+      case 'correct':    markCorrect(); break;
+      case 'wrong':      playerDidNotGetIt(); break;
+      case 'no-score':   noScoreRound(); break;
+      case 'next-round': nextRound(); break;
+      case 'finish':     finishGame(); break;
+    }
+  };
 
   // Sync phase / team refs for use inside the Firebase closure
   useEffect(() => { phaseRef.current = state.phase; }, [state.phase]);
   useEffect(() => { currentTeamIndexRef.current = state.currentTeamIndex; }, [state.currentTeamIndex]);
   useEffect(() => { speedEliminatedTeamsRef.current = state.speedEliminatedTeams; }, [state.speedEliminatedTeams]);
+
+  // Push full game state to Firebase whenever state or timer changes
+  useEffect(() => {
+    const code = sessionCodeRef.current;
+    if (!code || !isFirebaseReady()) return;
+    const gs: RemoteGameState = {
+      phase: state.phase,
+      teams: state.teams.map(t => ({ id: t.id, name: t.name, color: t.color, score: t.score })),
+      currentTeamIndex: state.currentTeamIndex,
+      round: state.round,
+      maxRounds: state.maxRounds,
+      betSeconds: state.betSeconds,
+      timerStartedAt: timerStartedAtRef.current,
+      timerDuration: timerDurationRef.current,
+      stealMode: state.stealMode,
+      stealTeamIndex: state.stealTeamIndex,
+      currentTrack: state.currentTrack
+        ? { name: state.currentTrack.name, artist: state.currentTrack.artist, albumArt: state.currentTrack.albumArt, year: state.currentTrack.year }
+        : null,
+      gameMode: state.gameMode,
+      speedPoints: state.speedPoints,
+      noneScored: state.noneScored,
+      speedScoringTeamIndex: state.speedScoringTeamIndex,
+      speedEliminatedTeams: state.speedEliminatedTeams,
+      roundPoints: state.roundPoints,
+    };
+    pushGameState(code, gs);
+  // timerSyncTick ensures this runs when timer starts/stops even if state didn't change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, timerSyncTick]);
+
+  // Subscribe to actions pushed from remote phones
+  useEffect(() => {
+    if (!sessionCode) return;
+    return subscribeAction(sessionCode, (type) => {
+      actionHandlerRef.current(type);
+    });
+  }, [sessionCode]);
 
   // Firebase buzz listener — active only when multiphone session is live
   useEffect(() => {
