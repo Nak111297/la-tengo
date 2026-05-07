@@ -746,6 +746,25 @@ const GENRE_PLAYLISTS: Record<string, string> = {
   // 'Pop Latino': 'PLAYLIST_ID',
 };
 
+const GENRE_ARTISTS: Record<string, string[]> = {
+  'Indie Latino': [
+    'Rawayana',
+    'Manuel Medrano',
+    'Caloncho',
+    'Monsieur Periné',
+    'Simon Grossmann',
+    'Josean Log',
+    'Kevin Johansen',
+    'Vicente García',
+    'Jorge Drexler',
+    'Siddhartha',
+    'Alex Ferreira',
+    'Lasso',
+    'Arnau Griso',
+    'Alex Cuba',
+  ],
+};
+
 // ---------------------------------------------------------------------------
 // Track URI cache — avoids re-searching songs already found this browser
 // ---------------------------------------------------------------------------
@@ -778,6 +797,7 @@ type SearchTrack = {
   name: string;
   artists: { name: string }[];
   album: { name: string; images: { url: string }[]; release_date?: string };
+  is_local?: boolean;
 };
 
 async function spotifySearch(q: string, token: string, retries = 2): Promise<{ items: SearchTrack[]; error: string | null }> {
@@ -851,6 +871,42 @@ async function findTrackByGenreKeyword(genre: string, token: string): Promise<{ 
   return { result: trackInfoFrom(pick), error: null };
 }
 
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+async function findTrackByArtist(artist: string, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
+  const { items, error } = await spotifySearch(`artist:"${artist}"`, token);
+  if (error) return { result: null, error };
+  const normalizedArtist = normalizeSearchText(artist);
+  const valid = items.filter((track) =>
+    !track.is_local &&
+    typeof track.uri === 'string' &&
+    track.uri.startsWith('spotify:track:') &&
+    track.artists.some((trackArtist) => normalizeSearchText(trackArtist.name).includes(normalizedArtist)),
+  );
+  const pool = (valid.length > 0 ? valid : items).slice(0, 10);
+  if (pool.length === 0) return { result: null, error: 'no-items' };
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  return { result: trackInfoFrom(pick), error: null };
+}
+
+async function findTrackByGenreArtist(genre: string, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
+  const artists = GENRE_ARTISTS[genre];
+  if (!artists) return { result: null, error: 'no-artist-genre' };
+
+  for (const artist of shuffleArray(artists).slice(0, 5)) {
+    const { result, error } = await findTrackByArtist(artist, token);
+    if (result) return { result, error: null };
+    if (error === 'http-429') return { result: null, error };
+  }
+
+  return { result: null, error: 'no-items' };
+}
+
 // Single call to a curated playlist → random track from up to 100 items
 async function findTrackFromPlaylist(
   playlistId: string,
@@ -887,6 +943,11 @@ export async function loadTracksForGenre(genre: string, songSource: 'random' | '
   if (!token) throw new Error('No Spotify token');
 
   const rateLimitMsg = 'Límite de Spotify alcanzado. Espera unos segundos e intenta de nuevo.';
+  if (GENRE_ARTISTS[genre]) {
+    const { result, error } = await findTrackByGenreArtist(genre, token);
+    if (result) return [withGenreStart(result, genre)];
+    throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones para ${genre} (${error})`);
+  }
 
   if (songSource === 'random') {
     // Use the curated playlist for this genre if one is configured

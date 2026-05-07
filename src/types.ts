@@ -63,7 +63,9 @@ export const STEAL_POINTS = 1;
 
 export const SPEED_DURATION = 60;
 
-export const GENRES = [
+export const RANDOM_GENRE = 'Aleatorio';
+
+export const PLAYABLE_GENRES = [
   'EDM',
   'Pop Latino',
   'Reggaetón',
@@ -76,7 +78,10 @@ export const GENRES = [
   'R&B',
   '80s Hits',
   '90s Hits',
+  'Indie Latino',
 ] as const;
+
+export const GENRES = [...PLAYABLE_GENRES, RANDOM_GENRE] as const;
 
 export const GENRE_ICONS: Record<string, string> = {
   'EDM': '🎧',
@@ -91,6 +96,8 @@ export const GENRE_ICONS: Record<string, string> = {
   'R&B': '🎵',
   '80s Hits': '📼',
   '90s Hits': '💾',
+  'Indie Latino': '🌿',
+  'Aleatorio': '🎲',
 };
 
 export const TEAM_COLORS = [

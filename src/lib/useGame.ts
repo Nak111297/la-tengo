@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { GameState, Team, TrackInfo, GameMode, SongSource } from '../types';
-import { TEAM_COLORS, SPEED_DURATION } from '../types';
+import { PLAYABLE_GENRES, RANDOM_GENRE, TEAM_COLORS, SPEED_DURATION } from '../types';
 import { calculateScore, calculateSpeedScore } from './scoring';
 import { loadTracksForGenre, playSong, pauseSong } from './spotify-player';
 import {
@@ -170,6 +170,9 @@ export function useGame() {
 
   const selectGenre = useCallback(async (genre: string): Promise<string | null> => {
     clearTimers();
+    const selectedGenre = genre === RANDOM_GENRE
+      ? PLAYABLE_GENRES[Math.floor(Math.random() * PLAYABLE_GENRES.length)]
+      : genre;
     try {
       let tracks: TrackInfo[];
 
@@ -179,7 +182,7 @@ export function useGame() {
         const pool = fresh.length > 0 ? fresh : DEBUG_TRACKS;
         tracks = [pool[Math.floor(Math.random() * pool.length)]];
       } else {
-        tracks = await loadTracksForGenre(genre, songSourceRef.current);
+        tracks = await loadTracksForGenre(selectedGenre, songSourceRef.current);
         if (tracks.length === 0) return 'No se encontraron canciones para ese género.';
       }
 
