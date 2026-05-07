@@ -303,9 +303,15 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
   );
 }
 
-function GuessPromptView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: string; myTeamIdx: number }) {
+function GuessPromptView({ gs, room, myTeamIdx, timeLeft }: {
+  gs: RemoteGameState; room: string; myTeamIdx: number; timeLeft: number;
+}) {
   const [done, setDone] = useState(false);
-  const send = (type: string) => { if (done) return; setDone(true); pushAction(room, type); };
+  const send = (type: string) => {
+    if (done) return;
+    setDone(true);
+    pushAction(room, type, { teamIndex: myTeamIdx });
+  };
 
   const activeTeamIdx = gs.stealMode
     ? (gs.stealTeamIndex ?? gs.currentTeamIndex)
@@ -317,6 +323,10 @@ function GuessPromptView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: s
 
   return (
     <div className="flex flex-col items-center gap-6 w-full">
+      {gs.gameMode === 'knowledge' && (
+        <TimerBar timeLeft={timeLeft} total={gs.timerDuration ?? 30} color="#FFD23F" />
+      )}
+
       <div
         className="rounded-full px-4 py-1.5 text-sm font-bold border"
         style={{ color: team?.color, borderColor: `${team?.color}50`, background: `${team?.color}15` }}
@@ -325,16 +335,20 @@ function GuessPromptView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: s
       </div>
 
       <p className="text-qr-muted text-sm text-center">
-        {isMyTurn ? '¿Lo saben?' : 'Esperando respuesta'}
+        {isMyTurn ? 'Decidan antes de que acabe el tiempo' : 'Esperando respuesta'}
       </p>
 
       {isMyTurn ? (
-        <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-          <ActionBtn label="✓ Lo saben" color="#22c55e" onClick={() => send('got-it')} disabled={done} />
-          <ActionBtn label="✗ No saben" color="#FF2E88" onClick={() => send('wrong')} disabled={done} />
+        <div className="flex flex-col gap-3 w-full max-w-xs">
+          <ActionBtn label="Ver respuesta" sub="solo tu equipo" color="#22c55e" onClick={() => send('got-it')} disabled={done} />
+          <ActionBtn label="No la tenemos" sub={gs.stealMode ? 'nadie anota' : 'pasa a robo'} color="#FF2E88" onClick={() => send('wrong')} disabled={done} />
         </div>
       ) : (
-        <WaitingView label={`${team?.name} está respondiendo...`} />
+        <WaitingView
+          label={gs.stealMode
+            ? `${team?.name} está intentando robar...`
+            : `${team?.name} está respondiendo; si falla, ustedes pueden robar.`}
+        />
       )}
 
       {done && <p className="text-xs text-qr-muted">Enviado al host…</p>}
@@ -342,10 +356,33 @@ function GuessPromptView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: s
   );
 }
 
-function RevealView({ gs, room }: { gs: RemoteGameState; room: string }) {
+function RevealView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: string; myTeamIdx: number }) {
   const [done, setDone] = useState(false);
-  const send = (type: string) => { if (done) return; setDone(true); pushAction(room, type); };
+  const send = (type: string) => {
+    if (done) return;
+    setDone(true);
+    pushAction(room, type, { teamIndex: myTeamIdx });
+  };
   const track = gs.currentTrack;
+  const activeTeamIdx = gs.stealMode
+    ? (gs.stealTeamIndex ?? gs.currentTeamIndex)
+    : gs.currentTeamIndex;
+  const activeTeam = gs.teams[activeTeamIdx];
+  const canSeeAnswer = gs.gameMode !== 'knowledge' || gs.noneScored || myTeamIdx === activeTeamIdx;
+
+  if (!canSeeAnswer) {
+    return (
+      <div className="flex flex-col items-center gap-5 w-full py-6">
+        <div
+          className="rounded-full px-4 py-1.5 text-sm font-bold border"
+          style={{ color: activeTeam?.color, borderColor: `${activeTeam?.color}50`, background: `${activeTeam?.color}15` }}
+        >
+          {activeTeam?.name} está viendo la respuesta
+        </div>
+        <WaitingView label="La canción está oculta para que el robo siga limpio." />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-5 w-full">
@@ -364,9 +401,9 @@ function RevealView({ gs, room }: { gs: RemoteGameState; room: string }) {
 
       {!gs.noneScored && (
         <div className="flex flex-col gap-2 w-full max-w-xs">
-          <ActionBtn label="✓ Correcto" color="#22c55e" onClick={() => send('correct')} disabled={done} />
+          <ActionBtn label="Correcto" color="#22c55e" onClick={() => send('correct')} disabled={done} />
           <div className="grid grid-cols-2 gap-2">
-            <ActionBtn label="✗ Incorrecto" color="#FF2E88" onClick={() => send('wrong')} disabled={done} />
+            <ActionBtn label="Incorrecto" color="#FF2E88" onClick={() => send('wrong')} disabled={done} />
             <ActionBtn label="Sin puntos" color="#94a3b8" onClick={() => send('no-score')} disabled={done} />
           </div>
         </div>
@@ -532,11 +569,11 @@ export default function Buzz() {
 
           {gs?.phase === 'guess-prompt' && (
             // Key on phase+round so state resets each new prompt
-            <GuessPromptView key={`gp-${gs.round}`} gs={gs} room={room} myTeamIdx={myTeamIdx} />
+            <GuessPromptView key={`gp-${gs.round}`} gs={gs} room={room} myTeamIdx={myTeamIdx} timeLeft={timeLeft} />
           )}
 
           {gs?.phase === 'reveal' && (
-            <RevealView key={`rv-${gs.round}`} gs={gs} room={room} />
+            <RevealView key={`rv-${gs.round}`} gs={gs} room={room} myTeamIdx={myTeamIdx} />
           )}
 
           {gs?.phase === 'score-artist' && (

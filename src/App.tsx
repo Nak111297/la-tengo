@@ -28,6 +28,7 @@ export default function App() {
     startGame, selectGenre, betAndPlay,
     buzzIn, replaySong, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
     confirmCorrect, backToAnswerCheck, nextRound, skipSong, resetGame, finishGame,
+    dismissPlaybackError,
   } = useGame();
 
   useEffect(() => {
@@ -44,6 +45,12 @@ export default function App() {
     setLoading(false);
     if (error) setGenreError(error);
   }, [selectGenre]);
+
+  const handleBet = useCallback(async (seconds: number) => {
+    setLoading(true);
+    await betAndPlay(seconds);
+    setLoading(false);
+  }, [betAndPlay]);
 
   const reconnectSpotify = () => {
     clearAuth();
@@ -143,6 +150,41 @@ export default function App() {
         </div>
       )}
 
+      {state.playbackError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
+          <div className="w-full max-w-sm rounded-[28px] border border-qr-red/40 bg-qr-card p-6 text-center">
+            <p className="text-3xl mb-3">⚠️</p>
+            <p className="font-display font-bold text-lg text-qr-red mb-1">Spotify no arrancó</p>
+            <p className="text-sm text-qr-muted mb-5">{state.playbackError}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={dismissPlaybackError}
+                className="flex-1 rounded-full border border-white/15 py-3 text-sm font-bold text-qr-muted transition hover:border-white/30"
+              >
+                Cerrar
+              </button>
+              {!debugMode && (
+                <button
+                  onClick={reconnectSpotify}
+                  className="flex-1 rounded-full bg-qr-green py-3 text-sm font-black text-qr-bg transition hover:brightness-110 active:scale-95"
+                >
+                  Reconectar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading && state.phase === 'playing' && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-md">
+          <div className="flex flex-col items-center gap-4 rounded-[28px] border border-white/10 bg-qr-card px-8 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
+            <div className="h-10 w-10 rounded-full border-4 border-white/10 border-t-qr-green animate-spin" />
+            <p className="text-sm font-bold text-qr-text">Iniciando Spotify...</p>
+          </div>
+        </div>
+      )}
+
       <div className={state.phase !== 'setup' ? 'pt-11' : ''}>
         {state.phase === 'setup' && (
           <Setup onStart={(t, r, g, s, debug, mp, code) => { setDebugMode(debug); startGame(t, r, g, s, debug, mp, code); }} />
@@ -192,7 +234,7 @@ export default function App() {
         )}
 
         {state.phase === 'bet-time' && currentTeam && !isSpeed && (
-          <BetTime currentTeam={currentTeam} onBet={betAndPlay} />
+          <BetTime currentTeam={currentTeam} onBet={handleBet} />
         )}
 
         {state.phase === 'playing' && currentTeam && !isSpeed && (

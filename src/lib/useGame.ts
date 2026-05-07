@@ -58,7 +58,10 @@ const INITIAL_STATE: GameState = {
   roundPoints: {},
   multiphone: false,
   sessionCode: null,
+  playbackError: null,
 };
+
+const PLAYBACK_ERROR = 'No pude iniciar Spotify. Verifica que el dispositivo seleccionado siga activo y vuelve a intentar.';
 
 export function useGame() {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
@@ -82,6 +85,7 @@ export function useGame() {
   const phaseRef = useRef<GameState['phase']>('setup');
   const currentTeamIndexRef = useRef(0);
   const stealTeamIndexRef = useRef<number | null>(null);
+  const noneScoredRef = useRef(false);
   const speedEliminatedTeamsRef = useRef<number[]>([]);
   const buzzInRef = useRef<(teamIndexOverride?: number) => void>(() => {});
   // Action handler ref keeps the Firebase listener connected to current callbacks.
@@ -160,7 +164,7 @@ export function useGame() {
       setSessionCode(null);
     }
 
-    update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1, maxRounds, gameMode, songSource, multiphone, sessionCode: code });
+    update({ teams, phase: 'genre-select', currentTeamIndex: 0, round: 1, maxRounds, gameMode, songSource, multiphone, sessionCode: code, playbackError: null });
   }, [update, setSessionCode]);
 
   const selectGenre = useCallback(async (genre: string): Promise<string | null> => {
@@ -192,7 +196,10 @@ export function useGame() {
           currentTrackUri: pool[0].uri,
           speedEliminatedTeams: [],
         });
-        if (!debugModeRef.current) await playSong(pool[0].uri);
+        if (!debugModeRef.current && !(await playSong(pool[0].uri))) {
+          update({ phase: 'genre-select', currentTrack: null, currentTrackUri: null, playbackError: PLAYBACK_ERROR });
+          return PLAYBACK_ERROR;
+        }
         startCountdown(SPEED_DURATION, () => {
           // Speed mode: don't pause — let the song keep playing until the next one starts
           clearTimers();
@@ -203,6 +210,7 @@ export function useGame() {
           phase: 'bet-time',
           currentTrack: pool[0],
           currentTrackUri: pool[0].uri,
+          playbackError: null,
         });
       }
 
@@ -212,13 +220,16 @@ export function useGame() {
     }
   }, [update, clearTimers, startCountdown]);
 
-  const betAndPlay = useCallback(async (seconds: number) => {
+  const betAndPlay = useCallback(async (seconds: number): Promise<string | null> => {
     const track = tracksRef.current[trackIndexRef.current];
-    if (!track) return;
+    if (!track) return null;
     betSecondsRef.current = seconds;
+    update({ betSeconds: seconds, phase: 'playing', playbackError: null });
+    if (!debugModeRef.current && !(await playSong(track.uri))) {
+      update({ betSeconds: null, phase: 'bet-time', playbackError: PLAYBACK_ERROR });
+      return PLAYBACK_ERROR;
+    }
     playedUrisRef.current.add(track.uri);
-    update({ betSeconds: seconds, phase: 'playing' });
-    if (!debugModeRef.current) await playSong(track.uri);
     startCountdown(seconds, async () => {
       if (!debugModeRef.current) await pauseSong();
       clearTimers();
@@ -230,6 +241,7 @@ export function useGame() {
         playerDidNotGetItRef.current();
       });
     });
+    return null;
   }, [update, clearTimers, startCountdown]);
 
   const buzzIn = useCallback((teamIndexOverride?: number) => {
@@ -268,8 +280,16 @@ export function useGame() {
     clearTimers();
     const track = tracksRef.current[trackIndexRef.current];
     if (!track) return;
-    update({ phase: 'playing' });
-    if (!debugModeRef.current) await playSong(track.uri);
+    update({ phase: 'playing', playbackError: null });
+    if (!debugModeRef.current && !(await playSong(track.uri))) {
+      setCanReplay(true);
+      update({ phase: 'guess-prompt', playbackError: PLAYBACK_ERROR });
+      startCountdown(30, () => {
+        clearTimers();
+        playerDidNotGetItRef.current();
+      });
+      return;
+    }
     startCountdown(betSecondsRef.current, async () => {
       if (!debugModeRef.current) await pauseSong();
       clearTimers();
@@ -382,7 +402,11 @@ export function useGame() {
       const track = tracksRef.current[trackIndexRef.current];
       if (track) {
         (async () => {
-          await playCurrentTrack().catch(() => false);
+          const started = await playCurrentTrack().catch(() => false);
+          if (!started) {
+            update({ playbackError: PLAYBACK_ERROR });
+            return;
+          }
           startCountdown(30, async () => {
             if (!debugModeRef.current) await pauseSong();
             clearTimers();
@@ -484,6 +508,10 @@ export function useGame() {
     setState(INITIAL_STATE);
   }, [clearTimers, setCanReplay, setSessionCode]);
 
+  const dismissPlaybackError = useCallback(() => {
+    update({ playbackError: null });
+  }, [update]);
+
   useEffect(() => {
     playerDidNotGetItRef.current = playerDidNotGetIt;
   }, [playerDidNotGetIt]);
@@ -497,14 +525,21 @@ export function useGame() {
     phaseRef.current = state.phase;
     currentTeamIndexRef.current = state.currentTeamIndex;
     stealTeamIndexRef.current = state.stealTeamIndex;
+    noneScoredRef.current = state.noneScored;
     speedEliminatedTeamsRef.current = state.speedEliminatedTeams;
-  }, [state.phase, state.currentTeamIndex, state.stealTeamIndex, state.speedEliminatedTeams]);
+  }, [state.phase, state.currentTeamIndex, state.stealTeamIndex, state.noneScored, state.speedEliminatedTeams]);
 
   // Remote phone actions control the host only when the host is already in the
   // matching phase. Late or duplicate actions are ignored.
   useEffect(() => {
     actionHandlerRef.current = (type: string, payload: RemoteActionPayload | null) => {
       const phase = phaseRef.current;
+      const activeKnowledgeTeamIndex = stealModeRef.current
+        ? stealTeamIndexRef.current
+        : currentTeamIndexRef.current;
+      const isActiveKnowledgePhone =
+        gameModeRef.current !== 'knowledge' ||
+        payload?.teamIndex === activeKnowledgeTeamIndex;
       switch (type) {
         case 'select-genre':
           if (
@@ -525,16 +560,16 @@ export function useGame() {
           }
           break;
         case 'got-it':
-          if (phase === 'guess-prompt') playerGotIt();
+          if (phase === 'guess-prompt' && isActiveKnowledgePhone) playerGotIt();
           break;
         case 'correct':
-          if (phase === 'reveal') markCorrect();
+          if (phase === 'reveal' && isActiveKnowledgePhone) markCorrect();
           break;
         case 'wrong':
-          if (phase === 'guess-prompt' || phase === 'reveal') playerDidNotGetIt();
+          if ((phase === 'guess-prompt' || phase === 'reveal') && isActiveKnowledgePhone) playerDidNotGetIt();
           break;
         case 'no-score':
-          if (phase === 'reveal') noScoreRound();
+          if (phase === 'reveal' && (noneScoredRef.current || isActiveKnowledgePhone)) noScoreRound();
           break;
         case 'next-round':
           if (phase === 'round-summary') nextRound();
@@ -570,6 +605,7 @@ export function useGame() {
       speedScoringTeamIndex: state.speedScoringTeamIndex,
       speedEliminatedTeams: state.speedEliminatedTeams,
       roundPoints: state.roundPoints,
+      playbackError: state.playbackError,
     };
     pushGameState(code, gs);
   }, [state, timerSyncTick]);
@@ -623,5 +659,6 @@ export function useGame() {
     skipSong,
     resetGame,
     finishGame,
+    dismissPlaybackError,
   };
 }

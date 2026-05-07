@@ -28,6 +28,7 @@ export interface GameState {
   roundPoints: Record<string, number>;
   multiphone: boolean;
   sessionCode: string | null;
+  playbackError: string | null;
 }
 
 export type GamePhase =

@@ -99,6 +99,7 @@ export interface RemoteGameState {
   speedScoringTeamIndex: number | null;
   speedEliminatedTeams: number[];
   roundPoints: Record<string, number>;
+  playbackError: string | null;
 }
 
 export async function pushGameState(code: string, gs: RemoteGameState): Promise<void> {
@@ -143,6 +144,7 @@ function normalizeRemoteState(raw: unknown): RemoteGameState {
     speedScoringTeamIndex:(r.speedScoringTeamIndex as number | null)    ?? null,
     speedEliminatedTeams: toArray<number>(r.speedEliminatedTeams),
     roundPoints:          (r.roundPoints as Record<string, number>)     ?? {},
+    playbackError:        (r.playbackError as string | null)            ?? null,
   };
 }
 
