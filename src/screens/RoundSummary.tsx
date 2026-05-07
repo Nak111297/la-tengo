@@ -23,7 +23,7 @@ function useCountUp(from: number, to: number) {
   const rafRef = useRef(0);
 
   useEffect(() => {
-    if (from === to) { setValue(to); return; }
+    if (from === to) return;
     const DELAY = 650, DURATION = 900;
     let startTs: number | null = null;
     const tick = (ts: number) => {
@@ -191,7 +191,7 @@ export default function RoundSummary({ teams, round, roundPoints, onNext, onEnd,
       el.style.transition = 'none';
 
       // Force style flush so the browser treats the above as the "from" value
-      el.getBoundingClientRect(); // eslint-disable-line @typescript-eslint/no-unused-expressions
+      void el.getBoundingClientRect();
 
       // Play: animate to final layout position
       el.style.transform = '';

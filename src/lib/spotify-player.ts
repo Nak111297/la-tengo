@@ -1,10 +1,14 @@
 import { getToken } from './spotify';
+import { EXTRA_GENRE_SONGS_CLASSICS } from './genre-songs-extra-classics';
+import { EXTRA_GENRE_SONGS_LATIN } from './genre-songs-extra-latin';
+import { EXTRA_GENRE_SONGS_PARTY } from './genre-songs-extra-party';
+import { EXTRA_GENRE_SONGS_POP } from './genre-songs-extra-pop';
 import type { TrackInfo } from '../types';
 
 let deviceId: string | null = null;
 
 export interface SpotifyDevice {
-  id: string;
+  id: string | null;
   name: string;
   type: string;
   is_active: boolean;
@@ -13,12 +17,22 @@ export interface SpotifyDevice {
 export async function getDevices(): Promise<SpotifyDevice[]> {
   const token = await getToken();
   if (!token) return [];
-  const res = await fetch('https://api.spotify.com/v1/me/player/devices', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.devices ?? [];
+  const headers = { Authorization: `Bearer ${token}` };
+  const [devicesRes, playbackRes] = await Promise.all([
+    fetch('https://api.spotify.com/v1/me/player/devices', { headers, cache: 'no-store' }),
+    fetch('https://api.spotify.com/v1/me/player', { headers, cache: 'no-store' }),
+  ]);
+
+  const devices: SpotifyDevice[] = devicesRes.ok ? (await devicesRes.json()).devices ?? [] : [];
+  if (playbackRes.ok && playbackRes.status !== 204) {
+    const playback = await playbackRes.json();
+    const activeDevice = playback?.device as SpotifyDevice | undefined;
+    if (activeDevice?.id && !devices.some(device => device.id === activeDevice.id)) {
+      devices.unshift(activeDevice);
+    }
+  }
+
+  return devices;
 }
 
 export function selectDevice(id: string): void {
@@ -34,8 +48,9 @@ export function isPlayerReady(): boolean {
 // ---------------------------------------------------------------------------
 
 type SongEntry = { name: string; artist: string; year: number };
+type GenreSongs = Record<string, SongEntry[]>;
 
-const GENRE_SONGS: Record<string, SongEntry[]> = {
+const BASE_GENRE_SONGS: GenreSongs = {
   'EDM': [
     {name:'Levels',                          artist:'Avicii',              year:2011},
     {name:'Wake Me Up',                      artist:'Avicii',              year:2013},
@@ -682,6 +697,36 @@ const GENRE_SONGS: Record<string, SongEntry[]> = {
     {name:'Tearin\' Up My Heart',            artist:'N\'Sync',             year:1997},
   ],
 };
+
+const EXTRA_GENRE_SONGS: GenreSongs = {
+  ...EXTRA_GENRE_SONGS_LATIN,
+  ...EXTRA_GENRE_SONGS_POP,
+  ...EXTRA_GENRE_SONGS_PARTY,
+  ...EXTRA_GENRE_SONGS_CLASSICS,
+};
+
+function mergeGenreSongs(base: GenreSongs, extras: GenreSongs): GenreSongs {
+  const merged: GenreSongs = {};
+
+  for (const [genre, songs] of Object.entries(base)) {
+    const seen = new Set<string>();
+    const combined: SongEntry[] = [];
+
+    for (const song of [...songs, ...(extras[genre] ?? [])]) {
+      const key = `${song.name.trim().toLowerCase()}::${song.artist.trim().toLowerCase()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      combined.push(song);
+      if (combined.length >= 150) break;
+    }
+
+    merged[genre] = combined;
+  }
+
+  return merged;
+}
+
+const GENRE_SONGS = mergeGenreSongs(BASE_GENRE_SONGS, EXTRA_GENRE_SONGS);
 
 // ---------------------------------------------------------------------------
 // Curated playlists — random mode pulls a random track from these directly

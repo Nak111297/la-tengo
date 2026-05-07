@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getDevices } from '../lib/spotify-player';
 
 interface SpotifyDevice {
-  id: string;
+  id: string | null;
   name: string;
   type: string;
   is_active: boolean;
@@ -22,17 +22,28 @@ interface Props {
 }
 
 export default function DevicePicker({ onSelect }: Props) {
-  const [devices, setDevices] = useState<SpotifyDevice[]>([]);
+  const [devices, setDevices] = useState<(SpotifyDevice & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refresh = async () => {
-    setLoading(true);
+  const refresh = useCallback(async () => {
     const list = await getDevices();
-    setDevices(list);
+    setDevices(list.filter((device): device is SpotifyDevice & { id: string } => Boolean(device.id)));
     setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    const initial = window.setTimeout(refresh, 0);
+    const interval = window.setInterval(refresh, 2500);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(interval);
+    };
+  }, [refresh]);
+
+  const handleManualRefresh = () => {
+    setLoading(true);
+    void refresh();
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-6">
@@ -75,7 +86,7 @@ export default function DevicePicker({ onSelect }: Props) {
       </div>
 
       <button
-        onClick={refresh}
+        onClick={handleManualRefresh}
         className="rounded-full border border-white/15 px-6 py-2 text-sm font-bold text-qr-muted transition hover:border-qr-cyan hover:text-qr-cyan"
       >
         ↺ Actualizar lista

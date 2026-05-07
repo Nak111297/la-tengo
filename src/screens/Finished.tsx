@@ -9,6 +9,11 @@ interface Props {
 
 const CONFETTI_COLORS = ['#FF2E88', '#22D3EE', '#FFD23F', '#7CFF6B', '#FF4D4D', '#B8B3D9', '#FF2E88', '#22D3EE'];
 
+function seededRandom(seed: number): number {
+  const value = Math.sin(seed * 9301 + 49297) * 233280;
+  return value - Math.floor(value);
+}
+
 export default function Finished({ teams, onNewGame, showNewGame = true }: Props) {
   const sorted = [...teams].sort((a, b) => b.score - a.score);
   const winner = sorted[0];
@@ -16,11 +21,11 @@ export default function Finished({ teams, onNewGame, showNewGame = true }: Props
   const particles = useMemo(() =>
     Array.from({ length: 60 }, (_, i) => ({
       id: i,
-      left: Math.random() * 100,
-      delay: Math.random() * 2.5,
-      duration: 2.5 + Math.random() * 2.5,
+      left: seededRandom(i + 1) * 100,
+      delay: seededRandom(i + 101) * 2.5,
+      duration: 2.5 + seededRandom(i + 201) * 2.5,
       color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-      size: 5 + Math.random() * 9,
+      size: 5 + seededRandom(i + 301) * 9,
       isCircle: i % 3 !== 0,
     })), []);
 
