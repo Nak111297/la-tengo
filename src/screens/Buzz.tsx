@@ -106,6 +106,25 @@ function CountdownDial({ timeLeft, total, color = '#22D3EE', label = 'seg' }: {
   );
 }
 
+function GuessCountdownText({ timeLeft }: { timeLeft: number }) {
+  const timerColor =
+    timeLeft <= 7 ? '#FF4D4D' :
+    timeLeft <= 15 ? '#FFD23F' :
+    '#22D3EE';
+
+  return (
+    <div className="flex items-center justify-center gap-2">
+      <span
+        className="font-display text-4xl font-black tabular-nums transition-colors duration-300"
+        style={{ color: timerColor, textShadow: `0 0 16px ${timerColor}60` }}
+      >
+        {timeLeft.toFixed(1)}
+      </span>
+      <span className="text-sm text-qr-muted">seg</span>
+    </div>
+  );
+}
+
 function SpeedPointsMeter({ timeLeft }: { timeLeft: number }) {
   const points = Math.max(0, Math.round((timeLeft / SPEED_DURATION) * 100));
   const pct = Math.max(0, Math.min(points, 100));
@@ -362,16 +381,14 @@ function GuessPromptView({ gs, room, myTeamIdx, timeLeft }: {
 
   return (
     <div className="flex flex-col items-center gap-6 w-full">
-      {gs.gameMode === 'knowledge' && (
-        <CountdownDial timeLeft={timeLeft} total={gs.timerDuration ?? 30} color="#FFD23F" />
-      )}
-
       <div
         className="rounded-full px-4 py-1.5 text-sm font-bold border"
         style={{ color: team?.color, borderColor: `${team?.color}50`, background: `${team?.color}15` }}
       >
         {isSpeed ? team?.name : (gs.stealMode ? `🔥 Robo — ${team?.name}` : team?.name)}
       </div>
+
+      {gs.gameMode === 'knowledge' && <GuessCountdownText timeLeft={timeLeft} />}
 
       <p className="text-qr-muted text-sm text-center">
         {isMyTurn ? 'Decidan antes de que acabe el tiempo' : 'Esperando respuesta'}
