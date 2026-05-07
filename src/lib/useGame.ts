@@ -196,7 +196,7 @@ export function useGame() {
           currentTrackUri: pool[0].uri,
           speedEliminatedTeams: [],
         });
-        if (!debugModeRef.current && !(await playSong(pool[0].uri))) {
+        if (!debugModeRef.current && !(await playSong(pool[0].uri, pool[0].startMs))) {
           update({ phase: 'genre-select', currentTrack: null, currentTrackUri: null, playbackError: PLAYBACK_ERROR });
           return PLAYBACK_ERROR;
         }
@@ -225,7 +225,7 @@ export function useGame() {
     if (!track) return null;
     betSecondsRef.current = seconds;
     update({ betSeconds: seconds, phase: 'playing', playbackError: null });
-    if (!debugModeRef.current && !(await playSong(track.uri))) {
+    if (!debugModeRef.current && !(await playSong(track.uri, track.startMs))) {
       update({ betSeconds: null, phase: 'bet-time', playbackError: PLAYBACK_ERROR });
       return PLAYBACK_ERROR;
     }
@@ -281,7 +281,7 @@ export function useGame() {
     const track = tracksRef.current[trackIndexRef.current];
     if (!track) return;
     update({ phase: 'playing', playbackError: null });
-    if (!debugModeRef.current && !(await playSong(track.uri))) {
+    if (!debugModeRef.current && !(await playSong(track.uri, track.startMs))) {
       setCanReplay(true);
       update({ phase: 'guess-prompt', playbackError: PLAYBACK_ERROR });
       startCountdown(30, () => {
@@ -316,7 +316,7 @@ export function useGame() {
     if (debugModeRef.current || gameModeRef.current !== 'knowledge') return true;
     const track = tracksRef.current[trackIndexRef.current];
     if (!track) return false;
-    return await playSong(track.uri);
+    return await playSong(track.uri, track.startMs);
   }, []);
 
   const markCorrect = useCallback(() => {

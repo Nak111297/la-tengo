@@ -49,6 +49,7 @@ export interface TrackInfo {
   album: string;
   albumArt: string;
   year: number;
+  startMs?: number;
 }
 
 export const BET_OPTIONS = [

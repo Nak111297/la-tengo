@@ -18,16 +18,16 @@ const DEVICE_ICON: Record<string, string> = {
 };
 
 interface Props {
-  onSelect: (deviceId: string) => void;
+  onSelect: (deviceId: string | null) => void;
 }
 
 export default function DevicePicker({ onSelect }: Props) {
-  const [devices, setDevices] = useState<(SpotifyDevice & { id: string })[]>([]);
+  const [devices, setDevices] = useState<SpotifyDevice[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     const list = await getDevices();
-    setDevices(list.filter((device): device is SpotifyDevice & { id: string } => Boolean(device.id)));
+    setDevices(list.filter(device => Boolean(device.id) || device.is_active));
     setLoading(false);
   }, []);
 
@@ -68,14 +68,16 @@ export default function DevicePicker({ onSelect }: Props) {
         ) : (
           devices.map(d => (
             <button
-              key={d.id}
+              key={d.id ?? `${d.name}-${d.type}-active`}
               onClick={() => onSelect(d.id)}
               className="flex w-full items-center gap-4 rounded-[20px] border border-white/10 bg-qr-card/60 px-5 py-4 text-left transition hover:border-qr-primary/50 hover:bg-qr-card active:scale-95"
             >
               <span className="text-2xl">{DEVICE_ICON[d.type] ?? '🔈'}</span>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-qr-text truncate">{d.name}</p>
-                <p className="text-xs text-qr-muted">{d.type}{d.is_active ? ' · activo' : ''}</p>
+                <p className="text-xs text-qr-muted">
+                  {d.type}{d.is_active ? ' · activo' : ''}{!d.id ? ' · reproducción actual' : ''}
+                </p>
               </div>
               {d.is_active && (
                 <span className="h-2 w-2 rounded-full bg-qr-green shrink-0" />

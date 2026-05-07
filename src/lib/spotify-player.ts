@@ -5,7 +5,9 @@ import { EXTRA_GENRE_SONGS_PARTY } from './genre-songs-extra-party';
 import { EXTRA_GENRE_SONGS_POP } from './genre-songs-extra-pop';
 import type { TrackInfo } from '../types';
 
-let deviceId: string | null = null;
+type SelectedDeviceId = string | null;
+
+let deviceId: SelectedDeviceId | undefined;
 
 export interface SpotifyDevice {
   id: string | null;
@@ -27,7 +29,12 @@ export async function getDevices(): Promise<SpotifyDevice[]> {
   if (playbackRes.ok && playbackRes.status !== 204) {
     const playback = await playbackRes.json();
     const activeDevice = playback?.device as SpotifyDevice | undefined;
-    if (activeDevice?.id && !devices.some(device => device.id === activeDevice.id)) {
+    const hasActiveDevice = activeDevice && (
+      activeDevice.id
+        ? devices.some(device => device.id === activeDevice.id)
+        : devices.some(device => device.is_active && device.name === activeDevice.name && device.type === activeDevice.type)
+    );
+    if (activeDevice && !hasActiveDevice) {
       devices.unshift(activeDevice);
     }
   }
@@ -35,12 +42,12 @@ export async function getDevices(): Promise<SpotifyDevice[]> {
   return devices;
 }
 
-export function selectDevice(id: string): void {
+export function selectDevice(id: SelectedDeviceId): void {
   deviceId = id;
 }
 
 export function isPlayerReady(): boolean {
-  return !!deviceId;
+  return deviceId !== undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -808,6 +815,14 @@ function trackInfoFrom(t: SearchTrack, fallbackYear?: number): TrackInfo {
   };
 }
 
+function getGenreStartMs(genre: string): number {
+  return genre === 'EDM' ? 45000 : 10000;
+}
+
+function withGenreStart(track: TrackInfo, genre: string): TrackInfo {
+  return { ...track, startMs: getGenreStartMs(genre) };
+}
+
 async function findTrackAdvanced(song: SongEntry, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
   const cached = getCached(song.artist, song.name);
   if (cached) return { result: cached, error: null };
@@ -878,12 +893,12 @@ export async function loadTracksForGenre(genre: string, songSource: 'random' | '
     const playlistId = GENRE_PLAYLISTS[genre];
     if (playlistId) {
       const { result, error } = await findTrackFromPlaylist(playlistId, token);
-      if (result) return [result];
+      if (result) return [withGenreStart(result, genre)];
       throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones en el playlist de ${genre} (${error})`);
     }
     // Fallback for genres without a playlist: keyword search
     const { result, error } = await findTrackByGenreKeyword(genre, token);
-    if (result) return [result];
+    if (result) return [withGenreStart(result, genre)];
     throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones para ${genre} (${error})`);
   }
 
@@ -892,7 +907,7 @@ export async function loadTracksForGenre(genre: string, songSource: 'random' | '
   if (!songs) throw new Error(`Género no configurado: ${genre}`);
   for (const song of shuffleArray([...songs]).slice(0, 5)) {
     const { result, error } = await findTrackAdvanced(song, token);
-    if (result) return [result];
+    if (result) return [withGenreStart(result, genre)];
     if (error === 'http-429') throw new Error(rateLimitMsg);
     // 'no-items' or other error → try next song
   }
@@ -929,27 +944,29 @@ async function isTrackPlaying(token: string, trackUri: string): Promise<boolean>
   return (
     playback?.is_playing === true &&
     playback.item?.uri === trackUri &&
-    (!deviceId || playback.device?.id === deviceId)
+    (typeof deviceId !== 'string' || playback.device?.id === deviceId)
   );
 }
 
-export async function playSong(trackUri: string): Promise<boolean> {
+export async function playSong(trackUri: string, startMs = 0): Promise<boolean> {
   const token = await getToken();
-  if (!token || !deviceId) return false;
+  if (!token || deviceId === undefined) return false;
 
   const doPlay = () =>
-    fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+    fetch(`https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uris: [trackUri], position_ms: 0 }),
+      body: JSON.stringify({ uris: [trackUri], position_ms: startMs }),
     }).catch(() => null);
 
   const transferPlayback = () =>
-    fetch('https://api.spotify.com/v1/me/player', {
+    deviceId
+      ? fetch('https://api.spotify.com/v1/me/player', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ device_ids: [deviceId], play: false }),
-    }).catch(() => null);
+      }).catch(() => null)
+      : Promise.resolve(null);
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const res = await doPlay();
@@ -964,7 +981,7 @@ export async function playSong(trackUri: string): Promise<boolean> {
 
   // One final plain resume covers the case where Spotify loaded the URI but
   // left playback paused after device transfer.
-  await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+  await fetch(`https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
   }).catch(() => null);
@@ -972,7 +989,7 @@ export async function playSong(trackUri: string): Promise<boolean> {
   if (await isTrackPlaying(token, trackUri)) return true;
 
   const playback = await getPlaybackState(token);
-  if (playback?.device?.id !== deviceId) {
+  if (deviceId && playback?.device?.id !== deviceId) {
     await fetch('https://api.spotify.com/v1/me/player', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -984,8 +1001,8 @@ export async function playSong(trackUri: string): Promise<boolean> {
 
 export async function pauseSong(): Promise<void> {
   const token = await getToken();
-  if (!token || !deviceId) return;
-  await fetch(`https://api.spotify.com/v1/me/player/pause?device_id=${deviceId}`, {
+  if (!token || deviceId === undefined) return;
+  await fetch(`https://api.spotify.com/v1/me/player/pause${deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
   });
