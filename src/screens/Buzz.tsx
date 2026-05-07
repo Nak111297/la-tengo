@@ -68,20 +68,39 @@ function Scoreboard({ teams, currentIdx, stealIdx, stealMode }: {
   );
 }
 
-function TimerBar({ timeLeft, total, color = '#FF2E88' }: { timeLeft: number; total: number; color?: string }) {
-  const pct = total > 0 ? Math.max(timeLeft / total, 0) : 0;
+function CountdownDial({ timeLeft, total, color = '#22D3EE', label = 'seg' }: {
+  timeLeft: number;
+  total: number;
+  color?: string;
+  label?: string;
+}) {
+  const pct = total > 0 ? Math.max(0, Math.min(100, (timeLeft / total) * 100)) : 0;
   const isUrgent = pct < 0.25;
+  const ringColor = isUrgent ? '#FF2E88' : color;
   return (
-    <div className="w-full max-w-xs">
-      <div className="flex justify-between text-xs font-bold mb-1" style={{ color: isUrgent ? '#FF2E88' : color }}>
-        <span>Tiempo</span>
-        <span>{Math.ceil(timeLeft)}s</span>
-      </div>
-      <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct * 100}%`, background: isUrgent ? '#FF2E88' : color }}
+    <div className="relative flex h-44 w-44 items-center justify-center">
+      <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+        <circle
+          cx="50"
+          cy="50"
+          r="44"
+          fill="none"
+          stroke={ringColor}
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${pct * 2.765} 276.5`}
+          style={{ filter: `drop-shadow(0 0 8px ${ringColor}80)`, transition: 'stroke-dasharray 0.1s, stroke 0.1s' }}
         />
+      </svg>
+      <div className="text-center">
+        <span
+          className="block font-mono text-4xl font-black tabular-nums text-qr-yellow"
+          style={{ textShadow: '0 0 20px rgba(255,210,63,0.5)' }}
+        >
+          {timeLeft.toFixed(1)}
+        </span>
+        <span className="text-xs text-qr-muted">{label}</span>
       </div>
     </div>
   );
@@ -90,18 +109,39 @@ function TimerBar({ timeLeft, total, color = '#FF2E88' }: { timeLeft: number; to
 function SpeedPointsMeter({ timeLeft }: { timeLeft: number }) {
   const points = Math.max(0, Math.round((timeLeft / SPEED_DURATION) * 100));
   const pct = Math.max(0, Math.min(points, 100));
+  const ringColor = `hsl(${pct * 0.5}, 95%, 55%)`;
+  const strokeLen = 276.5;
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-3">
       <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Puntos en juego</p>
-      <div
-        className="flex h-28 w-28 items-center justify-center rounded-full border-4"
-        style={{
-          borderColor: pct < 25 ? '#FF2E88' : '#FFD23F',
-          boxShadow: `0 0 26px ${pct < 25 ? '#FF2E8855' : '#FFD23F55'}`,
-        }}
-      >
-        <span className="font-display text-5xl font-black text-qr-yellow tabular-nums">{points}</span>
+      <div className="relative flex h-52 w-52 items-center justify-center">
+        <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+          <circle
+            cx="50"
+            cy="50"
+            r="44"
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={`${pct * (strokeLen / 100)} ${strokeLen}`}
+            style={{ filter: `drop-shadow(0 0 10px ${ringColor}90)`, transition: 'all 0.1s' }}
+          />
+        </svg>
+        <div className="text-center">
+          <span
+            className="block font-mono text-6xl font-black tabular-nums transition-colors duration-100"
+            style={{ color: ringColor, textShadow: `0 0 24px ${ringColor}80` }}
+          >
+            {points}
+          </span>
+          <span className="text-sm text-qr-muted">pts posibles</span>
+        </div>
       </div>
+      <p className="font-mono text-lg font-black tabular-nums text-qr-muted">
+        {timeLeft.toFixed(1)} seg
+      </p>
     </div>
   );
 }
@@ -257,10 +297,10 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
       {isSpeed ? (
         <SpeedPointsMeter timeLeft={timeLeft} />
       ) : (
-        <TimerBar
+        <CountdownDial
           timeLeft={timeLeft}
           total={gs.timerDuration ?? gs.betSeconds ?? 30}
-          color="#22D3EE"
+          color={gs.stealMode ? '#FF4D4D' : '#22D3EE'}
         />
       )}
 
@@ -323,7 +363,7 @@ function GuessPromptView({ gs, room, myTeamIdx, timeLeft }: {
   return (
     <div className="flex flex-col items-center gap-6 w-full">
       {gs.gameMode === 'knowledge' && (
-        <TimerBar timeLeft={timeLeft} total={gs.timerDuration ?? 30} color="#FFD23F" />
+        <CountdownDial timeLeft={timeLeft} total={gs.timerDuration ?? 30} color="#FFD23F" />
       )}
 
       <div
