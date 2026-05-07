@@ -9,11 +9,12 @@ interface Props {
   onBuzzIn: () => void;
   onSkip: () => void;
   sessionCode?: string | null;
+  canBuzz?: boolean;
 }
 
 const EQ_DELAYS = [0, 0.15, 0.08, 0.22, 0.05];
 
-export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, stealTeam, onBuzzIn, onSkip, sessionCode }: Props) {
+export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, stealTeam, onBuzzIn, onSkip, sessionCode, canBuzz = true }: Props) {
   const pct = Math.max(0, Math.min(100, (timeLeft / betSeconds) * 100));
   const ringColor = stealMode ? '#FF4D4D' : '#22D3EE';
 
@@ -79,9 +80,10 @@ export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, 
 
       <button
         onClick={onBuzzIn}
-        className="w-full max-w-xs rounded-full bg-qr-primary py-6 text-2xl font-black text-qr-text shadow-[0_0_32px_rgba(255,46,136,0.55)] transition active:scale-95 hover:brightness-110"
+        disabled={!canBuzz}
+        className="w-full max-w-xs rounded-full bg-qr-primary py-6 text-2xl font-black text-qr-text shadow-[0_0_32px_rgba(255,46,136,0.55)] transition active:scale-95 hover:brightness-110 disabled:opacity-35 disabled:shadow-none disabled:hover:brightness-100"
       >
-        ¡Que Rolón!
+        {canBuzz ? '¡Que Rolón!' : 'Esperando turno'}
       </button>
 
       {sessionCode && (

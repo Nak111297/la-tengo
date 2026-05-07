@@ -22,13 +22,14 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [genreError, setGenreError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [hostTeamIndex, setHostTeamIndex] = useState<number | null>(null);
 
   const {
     state, timeLeft, canReplay, sessionCode,
     startGame, selectGenre, betAndPlay,
     buzzIn, replaySong, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
     confirmCorrect, backToAnswerCheck, nextRound, skipSong, resetGame, finishGame,
-    dismissPlaybackError,
+    dismissPlaybackError, retryPlayback,
   } = useGame();
 
   useEffect(() => {
@@ -52,21 +53,75 @@ export default function App() {
     setLoading(false);
   }, [betAndPlay]);
 
+  const handleRetryPlayback = useCallback(async () => {
+    setLoading(true);
+    await retryPlayback();
+    setLoading(false);
+  }, [retryPlayback]);
+
   const reconnectSpotify = () => {
     clearAuth();
     redirectToSpotifyAuth();
   };
 
+  const chooseSpotifyDevice = (id: string | null) => {
+    selectDevice(id);
+    setPlayerReady(true);
+  };
+
   if (!authed && !debugMode) return <Login />;
   if (!playerReady && !debugMode) {
     return (
-      <DevicePicker onSelect={(id) => { selectDevice(id); setPlayerReady(true); }} />
+      <DevicePicker onSelect={chooseSpotifyDevice} />
     );
   }
 
   const currentTeam = state.teams[state.currentTeamIndex];
   const stealTeam = state.stealTeamIndex !== null ? state.teams[state.stealTeamIndex] : null;
   const isSpeed = state.gameMode === 'speed';
+  const answerTeamIndex = isSpeed
+    ? state.speedScoringTeamIndex
+    : (state.stealMode ? state.stealTeamIndex : state.currentTeamIndex);
+  const answerTeam = answerTeamIndex !== null ? state.teams[answerTeamIndex] : null;
+  const hostCanSeeAnswer =
+    !state.multiphone ||
+    state.noneScored ||
+    answerTeamIndex === null ||
+    hostTeamIndex === answerTeamIndex;
+  const activeListeningTeamIndex = state.stealMode
+    ? state.stealTeamIndex
+    : state.currentTeamIndex;
+  const hostCanBuzzKnowledge =
+    !state.multiphone ||
+    (activeListeningTeamIndex !== null && hostTeamIndex === activeListeningTeamIndex);
+  const hostCanBuzzSpeed =
+    !state.multiphone ||
+    (hostTeamIndex !== null && hostTeamIndex >= 0 && !state.speedEliminatedTeams.includes(hostTeamIndex));
+
+  if (state.multiphone && state.phase !== 'setup' && hostTeamIndex === null) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 text-center text-qr-text">
+        <div>
+          <img src="/logorolon2.png" alt="Que Rolón" className="mx-auto mb-4 h-14 w-auto" />
+          <h2 className="font-display text-2xl font-bold">¿Cuál es tu equipo?</h2>
+          <p className="mt-2 text-sm text-qr-muted">El host también juega con permisos de equipo.</p>
+        </div>
+        <div className="flex w-full max-w-sm flex-col gap-3">
+          {state.teams.map((team, idx) => (
+            <button
+              key={team.id}
+              onClick={() => setHostTeamIndex(idx)}
+              className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-qr-card/60 p-4 text-left transition active:scale-95"
+              style={{ borderColor: `${team.color}40` }}
+            >
+              <span className="h-5 w-5 rounded-full shrink-0" style={{ background: team.color, boxShadow: `0 0 10px ${team.color}80` }} />
+              <span className="font-display text-lg font-bold text-qr-text">{team.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen text-qr-text">
@@ -140,7 +195,7 @@ export default function App() {
                 Cancelar
               </button>
               <button
-                onClick={() => { setConfirmReset(false); setDebugMode(false); resetGame(); }}
+                onClick={() => { setConfirmReset(false); setDebugMode(false); setHostTeamIndex(null); resetGame(); }}
                 className="flex-1 rounded-full bg-qr-red py-3 text-sm font-black text-qr-text transition hover:brightness-110 active:scale-95"
               >
                 Reiniciar
@@ -165,12 +220,18 @@ export default function App() {
               </button>
               {!debugMode && (
                 <button
-                  onClick={reconnectSpotify}
+                  onClick={() => setPlayerReady(false)}
                   className="flex-1 rounded-full bg-qr-green py-3 text-sm font-black text-qr-bg transition hover:brightness-110 active:scale-95"
                 >
-                  Reconectar
+                  Elegir dispositivo
                 </button>
               )}
+              <button
+                onClick={handleRetryPlayback}
+                className="flex-1 rounded-full bg-qr-cyan py-3 text-sm font-black text-qr-bg transition hover:brightness-110 active:scale-95"
+              >
+                Reintentar
+              </button>
             </div>
           </div>
         </div>
@@ -187,7 +248,7 @@ export default function App() {
 
       <div className={state.phase !== 'setup' ? 'pt-11' : ''}>
         {state.phase === 'setup' && (
-          <Setup onStart={(t, r, g, s, debug, mp, code) => { setDebugMode(debug); startGame(t, r, g, s, debug, mp, code); }} />
+          <Setup onStart={(t, r, g, s, debug, mp, code) => { setDebugMode(debug); setHostTeamIndex(mp ? null : -1); startGame(t, r, g, s, debug, mp, code); }} />
         )}
 
         {state.phase === 'finished' && (
@@ -244,9 +305,13 @@ export default function App() {
             timeLeft={timeLeft}
             stealMode={state.stealMode}
             stealTeam={stealTeam}
-            onBuzzIn={() => buzzIn()}
+            onBuzzIn={() => {
+              if (!hostCanBuzzKnowledge) return;
+              buzzIn(state.multiphone && hostTeamIndex !== null && hostTeamIndex >= 0 ? hostTeamIndex : undefined);
+            }}
             onSkip={skipSong}
             sessionCode={sessionCode}
+            canBuzz={hostCanBuzzKnowledge}
           />
         )}
 
@@ -254,9 +319,13 @@ export default function App() {
           <SpeedPlaying
             currentTeam={currentTeam}
             timeLeft={timeLeft}
-            onBuzzIn={() => buzzIn()}
+            onBuzzIn={() => {
+              if (!hostCanBuzzSpeed) return;
+              buzzIn(state.multiphone && hostTeamIndex !== null && hostTeamIndex >= 0 ? hostTeamIndex : undefined);
+            }}
             onSkip={skipSong}
             sessionCode={sessionCode}
+            canBuzz={hostCanBuzzSpeed}
           />
         )}
 
@@ -270,6 +339,7 @@ export default function App() {
             onSkip={skipSong}
             gameMode={state.gameMode}
             speedPoints={state.speedPoints}
+            speedScoringTeamIndex={state.speedScoringTeamIndex}
             teams={state.teams}
             timeLeft={timeLeft}
             canReplay={canReplay}
@@ -279,13 +349,30 @@ export default function App() {
         )}
 
         {state.phase === 'reveal' && state.currentTrack && (
-          <Reveal
-            track={state.currentTrack}
-            noneScored={state.noneScored}
-            onCorrect={markCorrect}
-            onWrong={playerDidNotGetIt}
-            onNoScore={noScoreRound}
-          />
+          hostCanSeeAnswer ? (
+            <Reveal
+              track={state.currentTrack}
+              noneScored={state.noneScored}
+              onCorrect={markCorrect}
+              onWrong={playerDidNotGetIt}
+              onNoScore={noScoreRound}
+            />
+          ) : (
+            <div className="flex min-h-screen flex-col items-center justify-center gap-5 px-6 text-center">
+              <div
+                className="rounded-full border px-4 py-1.5 text-sm font-bold"
+                style={{ color: answerTeam?.color, borderColor: `${answerTeam?.color}50`, background: `${answerTeam?.color}15` }}
+              >
+                {answerTeam?.name} está viendo la respuesta
+              </div>
+              <div className="w-full max-w-sm rounded-[28px] border border-white/10 bg-qr-card/70 p-6">
+                <p className="font-display text-xl font-bold text-qr-text">Respuesta oculta</p>
+                <p className="mt-2 text-sm text-qr-muted">
+                  Como host estás jugando con otro equipo, así que la canción queda escondida hasta que termine este intento.
+                </p>
+              </div>
+            </div>
+          )
         )}
 
         {state.phase === 'score-artist' && currentTeam && (

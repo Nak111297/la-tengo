@@ -7,11 +7,12 @@ interface Props {
   onBuzzIn: () => void;
   onSkip: () => void;
   sessionCode?: string | null;
+  canBuzz?: boolean;
 }
 
 const EQ_DELAYS = [0, 0.12, 0.06, 0.18, 0.03, 0.15];
 
-export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip, sessionCode }: Props) {
+export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip, sessionCode, canBuzz = true }: Props) {
   const pct = Math.max(0, Math.min(100, (timeLeft / SPEED_DURATION) * 100));
   const currentScore = Math.round(pct);
   const strokeLen = 276.5;
@@ -73,9 +74,10 @@ export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip, 
 
       <button
         onClick={onBuzzIn}
-        className="w-full max-w-xs rounded-full bg-qr-yellow py-6 text-2xl font-black text-qr-bg shadow-[0_0_32px_rgba(255,210,63,0.5)] transition active:scale-95 hover:brightness-110"
+        disabled={!canBuzz}
+        className="w-full max-w-xs rounded-full bg-qr-yellow py-6 text-2xl font-black text-qr-bg shadow-[0_0_32px_rgba(255,210,63,0.5)] transition active:scale-95 hover:brightness-110 disabled:opacity-35 disabled:shadow-none disabled:hover:brightness-100"
       >
-        ¡Que Rolón!
+        {canBuzz ? '¡Que Rolón!' : 'Ya intentaste'}
       </button>
 
       {sessionCode && (

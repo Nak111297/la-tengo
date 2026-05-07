@@ -9,6 +9,7 @@ interface Props {
   onSkip: () => void;
   gameMode?: 'knowledge' | 'speed';
   speedPoints?: number | null;
+  speedScoringTeamIndex?: number | null;
   teams?: Team[];
   // Knowledge mode extras
   timeLeft?: number;
@@ -20,7 +21,7 @@ interface Props {
 
 export default function GuessPrompt({
   currentTeam, stealMode, stealTeam, onGotIt, onDidNotGetIt, onSkip,
-  gameMode, speedPoints, teams,
+  gameMode, speedPoints, speedScoringTeamIndex, teams,
   timeLeft, canReplay, onReplay,
   speedEliminatedTeams,
 }: Props) {
@@ -34,6 +35,47 @@ export default function GuessPrompt({
     '#22D3EE';
 
   if (isSpeed) {
+    const scoringTeamIndex = speedScoringTeamIndex;
+    const knownScoringTeam = scoringTeamIndex != null ? teams?.[scoringTeamIndex] : null;
+
+    if (knownScoringTeam && scoringTeamIndex != null) {
+      const knownScoringTeamIndex = scoringTeamIndex;
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 text-center">
+          <div>
+            <span className="inline-block rounded-full bg-qr-yellow/20 px-4 py-1.5 text-sm font-black text-qr-yellow mb-3">
+              ⚡ {speedPoints ?? 0} pts en juego
+            </span>
+            <h2 className="font-display text-3xl font-bold" style={{ color: knownScoringTeam.color }}>
+              {knownScoringTeam.name}
+            </h2>
+            <p className="mt-2 text-sm text-qr-muted">Este equipo presionó ¡Que Rolón!</p>
+          </div>
+
+          <div className="flex w-full max-w-sm flex-col gap-3">
+            <button
+              onClick={() => onGotIt(knownScoringTeamIndex)}
+              className="rounded-full bg-qr-green py-5 text-xl font-black text-qr-bg shadow-[0_0_28px_rgba(124,255,107,0.4)] transition active:scale-95 hover:brightness-110"
+            >
+              Ver respuesta
+            </button>
+            <button
+              onClick={onDidNotGetIt}
+              className="rounded-full border-2 border-qr-red/60 py-4 text-base font-bold text-qr-red transition hover:bg-qr-red/10 active:scale-95"
+            >
+              Incorrecto
+            </button>
+            <button
+              onClick={onSkip}
+              className="py-2 text-sm text-qr-muted/60 hover:text-qr-muted transition"
+            >
+              Saltar
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 text-center">
         <div>

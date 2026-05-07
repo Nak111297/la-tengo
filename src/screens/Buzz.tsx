@@ -313,13 +313,12 @@ function GuessPromptView({ gs, room, myTeamIdx, timeLeft }: {
     pushAction(room, type, { teamIndex: myTeamIdx });
   };
 
-  const activeTeamIdx = gs.stealMode
-    ? (gs.stealTeamIndex ?? gs.currentTeamIndex)
-    : gs.currentTeamIndex;
-  const team = gs.stealMode
-    ? gs.teams[gs.stealTeamIndex ?? 0]
-    : gs.teams[gs.currentTeamIndex];
-  const isMyTurn = myTeamIdx === activeTeamIdx;
+  const isSpeed = gs.gameMode === 'speed';
+  const activeTeamIdx = isSpeed
+    ? gs.speedScoringTeamIndex
+    : (gs.stealMode ? (gs.stealTeamIndex ?? gs.currentTeamIndex) : gs.currentTeamIndex);
+  const team = activeTeamIdx !== null ? gs.teams[activeTeamIdx] : null;
+  const isMyTurn = activeTeamIdx !== null && myTeamIdx === activeTeamIdx;
 
   return (
     <div className="flex flex-col items-center gap-6 w-full">
@@ -331,7 +330,7 @@ function GuessPromptView({ gs, room, myTeamIdx, timeLeft }: {
         className="rounded-full px-4 py-1.5 text-sm font-bold border"
         style={{ color: team?.color, borderColor: `${team?.color}50`, background: `${team?.color}15` }}
       >
-        {gs.stealMode ? `🔥 Robo — ${team?.name}` : team?.name}
+        {isSpeed ? team?.name : (gs.stealMode ? `🔥 Robo — ${team?.name}` : team?.name)}
       </div>
 
       <p className="text-qr-muted text-sm text-center">
@@ -345,7 +344,9 @@ function GuessPromptView({ gs, room, myTeamIdx, timeLeft }: {
         </div>
       ) : (
         <WaitingView
-          label={gs.stealMode
+          label={isSpeed
+            ? `${team?.name ?? 'El equipo'} está respondiendo.`
+            : gs.stealMode
             ? `${team?.name} está intentando robar...`
             : `${team?.name} está respondiendo; si falla, ustedes pueden robar.`}
         />
@@ -364,11 +365,12 @@ function RevealView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: string
     pushAction(room, type, { teamIndex: myTeamIdx });
   };
   const track = gs.currentTrack;
-  const activeTeamIdx = gs.stealMode
-    ? (gs.stealTeamIndex ?? gs.currentTeamIndex)
-    : gs.currentTeamIndex;
-  const activeTeam = gs.teams[activeTeamIdx];
-  const canSeeAnswer = gs.gameMode !== 'knowledge' || gs.noneScored || myTeamIdx === activeTeamIdx;
+  const isSpeed = gs.gameMode === 'speed';
+  const activeTeamIdx = isSpeed
+    ? gs.speedScoringTeamIndex
+    : (gs.stealMode ? (gs.stealTeamIndex ?? gs.currentTeamIndex) : gs.currentTeamIndex);
+  const activeTeam = activeTeamIdx !== null ? gs.teams[activeTeamIdx] : null;
+  const canSeeAnswer = gs.noneScored || (activeTeamIdx !== null && myTeamIdx === activeTeamIdx);
 
   if (!canSeeAnswer) {
     return (
@@ -418,13 +420,14 @@ function RevealView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: string
   );
 }
 
-function ScoreArtistView({ gs }: { gs: RemoteGameState }) {
+function ScoreArtistView({ gs, myTeamIdx }: { gs: RemoteGameState; myTeamIdx: number }) {
   // The host's ScoreCheck screen handles the got-artist/got-song checkboxes.
   // Remote just shows who is being scored while the host confirms.
   const scoringIdx = gs.gameMode === 'speed'
     ? (gs.speedScoringTeamIndex ?? gs.currentTeamIndex)
     : (gs.stealMode ? (gs.stealTeamIndex ?? 0) : gs.currentTeamIndex);
   const team = gs.teams[scoringIdx];
+  const canSeeTrack = myTeamIdx === scoringIdx || gs.noneScored;
 
   return (
     <div className="flex flex-col items-center gap-4 py-6 w-full">
@@ -437,7 +440,7 @@ function ScoreArtistView({ gs }: { gs: RemoteGameState }) {
           {team.name}
         </div>
       )}
-      {gs.currentTrack && (
+      {gs.currentTrack && canSeeTrack && (
         <p className="text-xs text-qr-muted text-center">
           {gs.currentTrack.artist} — {gs.currentTrack.name}
         </p>
@@ -569,15 +572,15 @@ export default function Buzz() {
 
           {gs?.phase === 'guess-prompt' && (
             // Key on phase+round so state resets each new prompt
-            <GuessPromptView key={`gp-${gs.round}`} gs={gs} room={room} myTeamIdx={myTeamIdx} timeLeft={timeLeft} />
+            <GuessPromptView key={`gp-${gs.round}-${gs.speedScoringTeamIndex ?? 'na'}-${gs.stealMode ? 'steal' : gs.currentTeamIndex}`} gs={gs} room={room} myTeamIdx={myTeamIdx} timeLeft={timeLeft} />
           )}
 
           {gs?.phase === 'reveal' && (
-            <RevealView key={`rv-${gs.round}`} gs={gs} room={room} myTeamIdx={myTeamIdx} />
+            <RevealView key={`rv-${gs.round}-${gs.speedScoringTeamIndex ?? 'na'}-${gs.noneScored ? 'none' : 'try'}`} gs={gs} room={room} myTeamIdx={myTeamIdx} />
           )}
 
           {gs?.phase === 'score-artist' && (
-            <ScoreArtistView key={`sa-${gs.round}`} gs={gs} />
+            <ScoreArtistView key={`sa-${gs.round}`} gs={gs} myTeamIdx={myTeamIdx} />
           )}
 
           {gs?.phase === 'round-summary' && (

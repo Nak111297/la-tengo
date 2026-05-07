@@ -86,6 +86,7 @@ export function useGame() {
   const currentTeamIndexRef = useRef(0);
   const stealTeamIndexRef = useRef<number | null>(null);
   const noneScoredRef = useRef(false);
+  const speedScoringTeamIndexRef = useRef<number | null>(null);
   const speedEliminatedTeamsRef = useRef<number[]>([]);
   const buzzInRef = useRef<(teamIndexOverride?: number) => void>(() => {});
   // Action handler ref keeps the Firebase listener connected to current callbacks.
@@ -301,6 +302,47 @@ export function useGame() {
       });
     });
   }, [clearTimers, startCountdown, update, setCanReplay]);
+
+  const retryPlayback = useCallback(async (): Promise<boolean> => {
+    const track = tracksRef.current[trackIndexRef.current];
+    if (!track) return false;
+    update({ playbackError: null });
+    if (debugModeRef.current) return true;
+
+    const started = await playSong(track.uri, track.startMs);
+    if (!started) {
+      update({ playbackError: PLAYBACK_ERROR });
+      return false;
+    }
+
+    const phase = phaseRef.current;
+    if (phase === 'playing' || (phase === 'guess-prompt' && gameModeRef.current === 'knowledge')) {
+      const seconds = gameModeRef.current === 'speed'
+        ? Math.max(timeLeftRef.current || SPEED_DURATION, 1)
+        : (betSecondsRef.current || 30);
+      clearTimers();
+      if (gameModeRef.current === 'speed') {
+        startCountdown(seconds, () => {
+          clearTimers();
+          setState(prev => ({ ...prev, phase: 'reveal', speedPoints: 0, noneScored: true }));
+        });
+      } else {
+        setCanReplay(false);
+        update({ phase: 'playing' });
+        startCountdown(seconds, async () => {
+          if (!debugModeRef.current) await pauseSong();
+          clearTimers();
+          update({ phase: 'guess-prompt' });
+          startCountdown(30, () => {
+            clearTimers();
+            playerDidNotGetItRef.current();
+          });
+        });
+      }
+    }
+
+    return true;
+  }, [clearTimers, startCountdown, update]);
 
   const playerGotIt = useCallback((teamIdx?: number) => {
     // Stop the 30s auto-fail timer — player claimed the answer, timer no longer needed
@@ -526,8 +568,9 @@ export function useGame() {
     currentTeamIndexRef.current = state.currentTeamIndex;
     stealTeamIndexRef.current = state.stealTeamIndex;
     noneScoredRef.current = state.noneScored;
+    speedScoringTeamIndexRef.current = state.speedScoringTeamIndex;
     speedEliminatedTeamsRef.current = state.speedEliminatedTeams;
-  }, [state.phase, state.currentTeamIndex, state.stealTeamIndex, state.noneScored, state.speedEliminatedTeams]);
+  }, [state.phase, state.currentTeamIndex, state.stealTeamIndex, state.noneScored, state.speedScoringTeamIndex, state.speedEliminatedTeams]);
 
   // Remote phone actions control the host only when the host is already in the
   // matching phase. Late or duplicate actions are ignored.
@@ -540,6 +583,9 @@ export function useGame() {
       const isActiveKnowledgePhone =
         gameModeRef.current !== 'knowledge' ||
         payload?.teamIndex === activeKnowledgeTeamIndex;
+      const isActiveSpeedPhone =
+        gameModeRef.current !== 'speed' ||
+        (speedScoringTeamIndexRef.current !== null && payload?.teamIndex === speedScoringTeamIndexRef.current);
       switch (type) {
         case 'select-genre':
           if (
@@ -560,16 +606,16 @@ export function useGame() {
           }
           break;
         case 'got-it':
-          if (phase === 'guess-prompt' && isActiveKnowledgePhone) playerGotIt();
+          if (phase === 'guess-prompt' && isActiveKnowledgePhone && isActiveSpeedPhone) playerGotIt(payload?.teamIndex);
           break;
         case 'correct':
-          if (phase === 'reveal' && isActiveKnowledgePhone) markCorrect();
+          if (phase === 'reveal' && isActiveKnowledgePhone && isActiveSpeedPhone) markCorrect();
           break;
         case 'wrong':
-          if ((phase === 'guess-prompt' || phase === 'reveal') && isActiveKnowledgePhone) playerDidNotGetIt();
+          if ((phase === 'guess-prompt' || phase === 'reveal') && isActiveKnowledgePhone && isActiveSpeedPhone) playerDidNotGetIt();
           break;
         case 'no-score':
-          if (phase === 'reveal' && (noneScoredRef.current || isActiveKnowledgePhone)) noScoreRound();
+          if (phase === 'reveal' && (noneScoredRef.current || (isActiveKnowledgePhone && isActiveSpeedPhone))) noScoreRound();
           break;
         case 'next-round':
           if (phase === 'round-summary') nextRound();
@@ -649,6 +695,7 @@ export function useGame() {
     betAndPlay,
     buzzIn,
     replaySong,
+    retryPlayback,
     playerGotIt,
     noScoreRound,
     markCorrect,
