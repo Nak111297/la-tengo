@@ -714,7 +714,9 @@ function setCache(artist: string, name: string, track: TrackInfo): void {
     const c = readCache();
     c[`${artist}::${name}`] = track;
     localStorage.setItem(CACHE_KEY, JSON.stringify(c));
-  } catch {}
+  } catch {
+    // Cache is an optimization; playback/search should continue if storage fails.
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -861,9 +863,34 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
-export async function playSong(trackUri: string): Promise<void> {
+interface PlaybackState {
+  is_playing?: boolean;
+  item?: { uri?: string } | null;
+  device?: { id?: string | null } | null;
+}
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function getPlaybackState(token: string): Promise<PlaybackState | null> {
+  const res = await fetch('https://api.spotify.com/v1/me/player', {
+    headers: { Authorization: `Bearer ${token}` },
+  }).catch(() => null);
+  if (!res || res.status === 204 || !res.ok) return null;
+  return await res.json() as PlaybackState;
+}
+
+async function isTrackPlaying(token: string, trackUri: string): Promise<boolean> {
+  const playback = await getPlaybackState(token);
+  return (
+    playback?.is_playing === true &&
+    playback.item?.uri === trackUri &&
+    (!deviceId || playback.device?.id === deviceId)
+  );
+}
+
+export async function playSong(trackUri: string): Promise<boolean> {
   const token = await getToken();
-  if (!token || !deviceId) return;
+  if (!token || !deviceId) return false;
 
   const doPlay = () =>
     fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
@@ -872,19 +899,42 @@ export async function playSong(trackUri: string): Promise<void> {
       body: JSON.stringify({ uris: [trackUri], position_ms: 0 }),
     }).catch(() => null);
 
-  // Try direct play first — no delay when Spotify is already active
-  const res = await doPlay();
+  const transferPlayback = () =>
+    fetch('https://api.spotify.com/v1/me/player', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_ids: [deviceId], play: false }),
+    }).catch(() => null);
 
-  // If device went inactive (404/null), re-transfer ownership then retry
-  if (!res || !res.ok) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const res = await doPlay();
+    await wait(attempt === 0 ? 300 : 650);
+    if (res?.ok && await isTrackPlaying(token, trackUri)) return true;
+
+    // If the device went inactive or Spotify accepted play without starting,
+    // reclaim the selected device and try again.
+    await transferPlayback();
+    await wait(600);
+  }
+
+  // One final plain resume covers the case where Spotify loaded the URI but
+  // left playback paused after device transfer.
+  await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+  }).catch(() => null);
+  await wait(350);
+  if (await isTrackPlaying(token, trackUri)) return true;
+
+  const playback = await getPlaybackState(token);
+  if (playback?.device?.id !== deviceId) {
     await fetch('https://api.spotify.com/v1/me/player', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ device_ids: [deviceId], play: false }),
     }).catch(() => {});
-    await new Promise(r => setTimeout(r, 600));
-    await doPlay();
   }
+  return false;
 }
 
 export async function pauseSong(): Promise<void> {

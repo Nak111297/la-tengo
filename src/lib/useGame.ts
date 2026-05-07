@@ -293,9 +293,10 @@ export function useGame() {
   }, [clearTimers, update]);
 
   const playCurrentTrack = useCallback(async () => {
-    if (debugModeRef.current || gameModeRef.current !== 'knowledge') return;
+    if (debugModeRef.current || gameModeRef.current !== 'knowledge') return true;
     const track = tracksRef.current[trackIndexRef.current];
-    if (track) await playSong(track.uri);
+    if (!track) return false;
+    return await playSong(track.uri);
   }, []);
 
   const markCorrect = useCallback(() => {
@@ -364,8 +365,6 @@ export function useGame() {
     // ── Knowledge mode ────────────────────────────────────────────────────────
     // Capture steal state BEFORE setState so we know which branch fired
     const wasInStealMode = stealModeRef.current;
-    playCurrentTrack().catch(() => {});
-
     setState((prev) => {
       if (prev.stealMode) {
         // Steal attempt failed → reveal with no score
@@ -383,6 +382,7 @@ export function useGame() {
       const track = tracksRef.current[trackIndexRef.current];
       if (track) {
         (async () => {
+          await playCurrentTrack().catch(() => false);
           startCountdown(30, async () => {
             if (!debugModeRef.current) await pauseSong();
             clearTimers();
@@ -403,6 +403,7 @@ export function useGame() {
         })();
       }
     } else {
+      playCurrentTrack().catch(() => {});
       stealModeRef.current = false;
     }
   }, [clearTimers, playCurrentTrack, startCountdown, update, setCanReplay]);
