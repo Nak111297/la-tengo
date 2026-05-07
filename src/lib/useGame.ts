@@ -539,6 +539,39 @@ export function useGame() {
     setState(prev => ({ ...prev, phase: 'finished' }));
   }, []);
 
+  const replaySameTeams = useCallback(() => {
+    clearTimers();
+    playedUrisRef.current.clear();
+    tracksRef.current = [];
+    trackIndexRef.current = 0;
+    betSecondsRef.current = 30;
+    savedSpeedTimeRef.current = 0;
+    stealModeRef.current = false;
+    setCanReplay(false);
+
+    const code = sessionCodeRef.current;
+    if (code) void clearBuzz(code);
+
+    setState(prev => ({
+      ...prev,
+      teams: prev.teams.map(team => ({ ...team, score: 0 })),
+      currentTeamIndex: 0,
+      round: 1,
+      phase: 'genre-select',
+      currentTrackUri: null,
+      currentTrack: null,
+      betSeconds: null,
+      stealMode: false,
+      stealTeamIndex: null,
+      noneScored: false,
+      speedPoints: null,
+      speedScoringTeamIndex: null,
+      speedEliminatedTeams: [],
+      roundPoints: {},
+      playbackError: null,
+    }));
+  }, [clearTimers, setCanReplay]);
+
   const resetGame = useCallback(() => {
     clearTimers();
     playedUrisRef.current.clear();
@@ -708,6 +741,7 @@ export function useGame() {
     nextRound,
     skipSong,
     resetGame,
+    replaySameTeams,
     finishGame,
     dismissPlaybackError,
   };

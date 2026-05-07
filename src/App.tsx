@@ -29,7 +29,7 @@ export default function App() {
     startGame, selectGenre, betAndPlay,
     buzzIn, replaySong, playerGotIt, noScoreRound, markCorrect, playerDidNotGetIt,
     confirmCorrect, backToAnswerCheck, nextRound, skipSong, resetGame, finishGame,
-    dismissPlaybackError, retryPlayback,
+    dismissPlaybackError, retryPlayback, replaySameTeams,
   } = useGame();
 
   useEffect(() => {
@@ -252,7 +252,12 @@ export default function App() {
         )}
 
         {state.phase === 'finished' && (
-          <Finished teams={state.teams} onNewGame={resetGame} />
+          <Finished
+            teams={state.teams}
+            onNewGame={resetGame}
+            onReplaySameTeams={replaySameTeams}
+            showReplaySameTeams={state.teams.length > 0}
+          />
         )}
 
         {state.phase === 'genre-select' && currentTeam && (

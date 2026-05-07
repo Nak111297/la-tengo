@@ -4,7 +4,9 @@ import type { Team } from '../types';
 interface Props {
   teams: Team[];
   onNewGame: () => void;
+  onReplaySameTeams?: () => void;
   showNewGame?: boolean;
+  showReplaySameTeams?: boolean;
 }
 
 const CONFETTI_COLORS = ['#FF2E88', '#22D3EE', '#FFD23F', '#7CFF6B', '#FF4D4D', '#B8B3D9', '#FF2E88', '#22D3EE'];
@@ -14,7 +16,7 @@ function seededRandom(seed: number): number {
   return value - Math.floor(value);
 }
 
-export default function Finished({ teams, onNewGame, showNewGame = true }: Props) {
+export default function Finished({ teams, onNewGame, onReplaySameTeams, showNewGame = true, showReplaySameTeams = false }: Props) {
   const sorted = [...teams].sort((a, b) => b.score - a.score);
   const winner = sorted[0];
 
@@ -97,13 +99,24 @@ export default function Finished({ teams, onNewGame, showNewGame = true }: Props
       </div>
 
       {showNewGame && (
-        <button
-          onClick={onNewGame}
-          className="anim-slide-up w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
-          style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.1}s` }}
-        >
-          Nueva partida
-        </button>
+        <div className="flex w-full max-w-sm flex-col gap-3">
+          {showReplaySameTeams && onReplaySameTeams && (
+            <button
+              onClick={onReplaySameTeams}
+              className="anim-slide-up rounded-full bg-qr-green py-4 text-lg font-black text-qr-bg shadow-[0_0_28px_rgba(124,255,107,0.35)] transition active:scale-95 hover:brightness-110"
+              style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.1}s` }}
+            >
+              Volver a jugar mismos equipos
+            </button>
+          )}
+          <button
+            onClick={onNewGame}
+            className="anim-slide-up rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
+            style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.18}s` }}
+          >
+            Nueva partida
+          </button>
+        </div>
       )}
     </div>
   );
