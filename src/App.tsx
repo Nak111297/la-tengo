@@ -23,6 +23,7 @@ export default function App() {
   const [genreError, setGenreError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [hostTeamIndex, setHostTeamIndex] = useState<number | null>(null);
+  const [hostAnswerOverrideKey, setHostAnswerOverrideKey] = useState<string | null>(null);
 
   const {
     state, timeLeft, canReplay, sessionCode,
@@ -83,9 +84,12 @@ export default function App() {
     ? state.speedScoringTeamIndex
     : (state.stealMode ? state.stealTeamIndex : state.currentTeamIndex);
   const answerTeam = answerTeamIndex !== null ? state.teams[answerTeamIndex] : null;
+  const answerOverrideKey = `${state.phase}:${state.currentTrackUri ?? 'none'}:${state.stealMode}:${state.stealTeamIndex ?? 'none'}:${state.speedScoringTeamIndex ?? 'none'}:${state.noneScored}`;
+  const hostAnswerOverride = hostAnswerOverrideKey === answerOverrideKey;
   const hostCanSeeAnswer =
     !state.multiphone ||
     state.noneScored ||
+    hostAnswerOverride ||
     answerTeamIndex === null ||
     hostTeamIndex === answerTeamIndex;
   const activeListeningTeamIndex = state.stealMode
@@ -375,6 +379,12 @@ export default function App() {
                 <p className="mt-2 text-sm text-qr-muted">
                   Como host estás jugando con otro equipo, así que la canción queda escondida hasta que termine este intento.
                 </p>
+                <button
+                  onClick={() => setHostAnswerOverrideKey(answerOverrideKey)}
+                  className="mt-5 w-full rounded-full border border-qr-yellow/50 bg-qr-yellow/10 py-3 text-sm font-black text-qr-yellow transition hover:border-qr-yellow hover:bg-qr-yellow/15 active:scale-95"
+                >
+                  Desocultar respuesta
+                </button>
               </div>
             </div>
           )
