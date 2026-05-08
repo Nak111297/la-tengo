@@ -76,7 +76,7 @@ export const PLAYABLE_GENRES = [
   'Fiesta / Party',
   'Hip Hop',
   'R&B',
-  '80s Hits',
+  'Classic Hits',
   '90s Hits',
   'Indie Latino',
 ] as const;
@@ -94,7 +94,7 @@ export const GENRE_ICONS: Record<string, string> = {
   'Fiesta / Party': '🎉',
   'Hip Hop': '🎤',
   'R&B': '🎵',
-  '80s Hits': '📼',
+  'Classic Hits': '📻',
   '90s Hits': '💾',
   'Indie Latino': '🌿',
   'Aleatorio': '🎲',

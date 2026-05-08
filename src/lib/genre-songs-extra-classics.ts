@@ -111,7 +111,7 @@ export const EXTRA_GENRE_SONGS_CLASSICS = {
     { name: 'Stranger in My House', artist: 'Tamia', year: 2000 },
   ],
 
-  '80s Hits': [
+  'Classic Hits': [
     { name: 'Africa', artist: 'Toto', year: 1982 },
     { name: 'Rosanna', artist: 'Toto', year: 1982 },
     { name: 'Sweet Dreams (Are Made of This)', artist: 'Eurythmics', year: 1983 },
