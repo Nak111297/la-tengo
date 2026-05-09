@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { subscribeTeams, subscribeGameState, sendBuzz, pushAction } from '../lib/firebase';
 import type { SessionTeam, RemoteGameState } from '../lib/firebase';
-import { BET_OPTIONS, GENRES, GENRE_ICONS, SPEED_DURATION } from '../types';
+import { BET_OPTIONS, GENRES, GENRE_ICONS, GENRE_LABELS, SPEED_DURATION } from '../types';
 import RoundSummary from './RoundSummary';
 import Finished from './Finished';
 
@@ -212,7 +212,7 @@ function GenreChoiceView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: s
       <div className="text-center">
         <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Tu turno</p>
         <h2 className="mt-1 font-display text-2xl font-bold" style={{ color: currentTeam?.color }}>
-          Elegí género
+          Elige género
         </h2>
       </div>
       <div className="grid w-full grid-cols-2 gap-2">
@@ -224,7 +224,7 @@ function GenreChoiceView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: s
             className="flex items-center gap-2 rounded-[20px] border border-white/10 bg-qr-card/60 px-3 py-4 text-left text-sm font-bold text-qr-text transition active:scale-95 disabled:opacity-35"
           >
             <span className="text-lg">{GENRE_ICONS[genre] ?? '🎵'}</span>
-            <span className="leading-tight">{genre}</span>
+            <span className="leading-tight">{GENRE_LABELS[genre] ?? genre}</span>
           </button>
         ))}
       </div>
@@ -253,7 +253,7 @@ function BetChoiceView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: str
       <div className="text-center">
         <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Tu turno</p>
         <h2 className="mt-1 font-display text-2xl font-bold" style={{ color: currentTeam?.color }}>
-          Apostá tiempo
+          Apuesta tiempo
         </h2>
       </div>
       <div className="flex w-full flex-col gap-3">
@@ -352,7 +352,7 @@ function PlayingView({ gs, room, myTeamIdx, timeLeft }: {
               transform: buzzing ? 'scale(0.91)' : 'scale(1)',
             }}
           >
-            {sent ? '✓\n¡Enviado!' : buzzing ? '…' : '¡QUE\nROLÓN!'}
+            {sent ? '✓\n¡Enviado!' : buzzing ? '…' : (isSpeed ? 'RESPONDER' : 'YA LA\nSABEMOS')}
           </button>
 
           {err && <p className="text-sm text-qr-red text-center">{err}</p>}

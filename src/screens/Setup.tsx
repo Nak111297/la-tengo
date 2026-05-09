@@ -40,7 +40,7 @@ export default function Setup({ onStart }: Props) {
         <img
           src="/logorolon2.png"
           alt="Que Rolón"
-          className="w-88 max-w-full select-none drop-shadow-[0_0_24px_rgba(255,46,136,0.35)]"
+          className="w-60 max-w-full select-none drop-shadow-[0_0_20px_rgba(255,46,136,0.28)]"
           draggable={false}
         />
         <p className="text-xs text-qr-muted">Nueva partida</p>
@@ -52,26 +52,32 @@ export default function Setup({ onStart }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => setGameMode('knowledge')}
-            className={`flex flex-col items-center gap-2 rounded-[24px] border p-4 transition ${
+            className={`relative flex flex-col items-center gap-2 rounded-[24px] border p-4 transition ${
               gameMode === 'knowledge'
-                ? 'border-qr-cyan bg-qr-cyan/10 text-qr-text shadow-[0_0_20px_rgba(34,211,238,0.2)]'
+                ? 'border-2 border-qr-cyan bg-qr-cyan/18 text-qr-text shadow-[0_0_20px_rgba(34,211,238,0.24)]'
                 : 'border-white/10 bg-qr-card/60 text-qr-muted hover:border-white/20'
             }`}
           >
+            {gameMode === 'knowledge' && (
+              <span className="absolute right-3 top-3 rounded-full bg-qr-cyan px-2 py-0.5 text-[10px] font-black text-qr-bg">✓ Seleccionado</span>
+            )}
             <span className="text-3xl">🧠</span>
-            <span className="font-display font-bold text-base">Knowledge</span>
-            <span className="text-center text-xs text-qr-muted leading-tight">Apostá el tiempo, gana puntos por riesgo</span>
+            <span className="font-display font-bold text-base">Conocimiento</span>
+            <span className="text-center text-xs text-qr-muted leading-tight">Apuesta tiempo, gana puntos por riesgo</span>
           </button>
           <button
             onClick={() => setGameMode('speed')}
-            className={`flex flex-col items-center gap-2 rounded-[24px] border p-4 transition ${
+            className={`relative flex flex-col items-center gap-2 rounded-[24px] border p-4 transition ${
               gameMode === 'speed'
-                ? 'border-qr-yellow bg-qr-yellow/10 text-qr-text shadow-[0_0_20px_rgba(255,210,63,0.2)]'
+                ? 'border-2 border-qr-yellow bg-qr-yellow/18 text-qr-text shadow-[0_0_20px_rgba(255,210,63,0.24)]'
                 : 'border-white/10 bg-qr-card/60 text-qr-muted hover:border-white/20'
             }`}
           >
+            {gameMode === 'speed' && (
+              <span className="absolute right-3 top-3 rounded-full bg-qr-yellow px-2 py-0.5 text-[10px] font-black text-qr-bg">✓ Seleccionado</span>
+            )}
             <span className="text-3xl">⚡</span>
-            <span className="font-display font-bold text-base">Speed</span>
+            <span className="font-display font-bold text-base">Velocidad</span>
             <span className="text-center text-xs text-qr-muted leading-tight">Puntaje 100→0, más rápido más puntos</span>
           </button>
         </div>
@@ -92,7 +98,7 @@ export default function Setup({ onStart }: Props) {
                   setTeams(updated);
                 }}
                 placeholder={`Equipo ${i + 1}`}
-                className="w-full rounded-[16px] border border-white/10 bg-qr-card/60 px-4 py-3 text-base text-qr-text placeholder:text-qr-muted/50 focus:border-qr-primary/60 focus:outline-none transition"
+                className="w-full rounded-[20px] border border-white/15 bg-qr-card/85 px-4 py-3 text-base font-bold text-qr-text placeholder:text-qr-muted/75 focus:border-qr-primary/70 focus:bg-qr-card focus:outline-none transition"
               />
               {teams.length > 2 && (
                 <button onClick={() => removeTeam(i)} className="text-qr-muted/60 hover:text-qr-red text-lg px-1 transition">✕</button>
@@ -153,9 +159,9 @@ export default function Setup({ onStart }: Props) {
                     }`}
                   >
                     <span className="text-xl">{src === 'random' ? '🎲' : '🎯'}</span>
-                    <span className="font-bold text-xs capitalize">{src}</span>
+                    <span className="font-bold text-xs">{src === 'random' ? 'Aleatorio' : 'Curado'}</span>
                     <span className="text-center text-[10px] text-qr-muted leading-tight">
-                      {src === 'random' ? 'Búsqueda libre por género' : 'Artistas curados por género'}
+                      {src === 'random' ? 'Búsqueda libre por género' : 'Canciones curadas por género'}
                     </span>
                   </button>
                 ))}
@@ -174,7 +180,7 @@ export default function Setup({ onStart }: Props) {
                   <span className="text-lg">📱</span>
                   <div className="text-left">
                     <p className={`text-sm font-bold ${multiphone ? 'text-qr-cyan' : 'text-qr-text'}`}>Multiphone</p>
-                    <p className="text-[10px] text-qr-muted leading-tight">Otros teléfonos pueden buzzear</p>
+                    <p className="text-[10px] text-qr-muted leading-tight">Otros teléfonos pueden responder</p>
                   </div>
                 </div>
                 <div className={`h-5 w-9 rounded-full transition-colors ${multiphone ? 'bg-qr-cyan' : 'bg-white/15'}`}>
@@ -199,7 +205,7 @@ export default function Setup({ onStart }: Props) {
                     {previewCode}
                   </span>
                   <p className="text-[10px] text-qr-muted/50 text-center leading-tight">
-                    Los jugadores pueden unirse ahora.<br />La partida empieza cuando presiones Comenzar.
+                    Los jugadores pueden unirse ahora.<br />La partida empieza cuando presiones Empezar partida.
                   </p>
                 </div>
               )}
@@ -239,9 +245,9 @@ export default function Setup({ onStart }: Props) {
       <button
         onClick={() => onStart(teams.map((t) => t.trim()), maxRounds, gameMode, songSource, debugMode, multiphone, previewCode)}
         disabled={!canStart}
-        className="w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110 disabled:opacity-30 disabled:pointer-events-none glow-pulse"
+        className="sticky bottom-4 z-10 w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110 disabled:opacity-30 disabled:pointer-events-none glow-pulse"
       >
-        {debugMode ? '🛠 Comenzar (Debug)' : 'Comenzar'}
+        {debugMode ? '🛠 Empezar partida (Debug)' : 'Empezar partida'}
       </button>
     </div>
   );

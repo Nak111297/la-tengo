@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { TrackInfo } from '../types';
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export default function Reveal({ track, noneScored, onCorrect, onWrong, onNoScore }: Props) {
+  const [hideArt, setHideArt] = useState(false);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 text-center">
       <p className="text-sm text-qr-muted">
@@ -22,16 +25,36 @@ export default function Reveal({ track, noneScored, onCorrect, onWrong, onNoScor
           <img
             src={track.albumArt}
             alt="Album art"
-            className="anim-art mx-auto mb-4 h-40 w-40 rounded-[20px] object-cover shadow-lg"
+            className={`anim-art mx-auto mb-3 h-36 w-36 rounded-[20px] object-cover shadow-lg transition ${hideArt ? 'blur-md opacity-70' : ''}`}
           />
         ) : (
           <div className="anim-art mx-auto mb-4 flex h-40 w-40 items-center justify-center rounded-[20px] bg-gradient-to-br from-qr-primary to-qr-cyan text-5xl shadow-lg">
             🎵
           </div>
         )}
-        <h2 className="font-display text-2xl font-bold text-qr-text">{track.name}</h2>
-        <p className="mt-1 text-lg text-qr-text/80">{track.artist}</p>
-        <p className="mt-1 text-sm text-qr-muted">{track.album} · {track.year}</p>
+        {track.albumArt && (
+          <button
+            onClick={() => setHideArt((value) => !value)}
+            className="mb-4 rounded-full border border-white/10 px-3 py-1 text-[10px] font-bold text-qr-muted transition hover:border-white/25 hover:text-qr-text"
+          >
+            {hideArt ? 'Mostrar carátula' : 'Ocultar carátula'}
+          </button>
+        )}
+        <div className="space-y-3 text-left">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-qr-muted">Canción</p>
+            <h2 className="font-display text-2xl font-bold text-qr-text">{track.name}</h2>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-qr-muted">Artista</p>
+            <p className="text-lg font-bold text-qr-text/90">{track.artist}</p>
+          </div>
+          {(track.year || track.album) && (
+            <p className="text-sm text-qr-muted">
+              {track.year ? `Año: ${track.year}` : ''}{track.year && track.album ? ' · ' : ''}{track.album}
+            </p>
+          )}
+        </div>
       </div>
 
       {noneScored ? (

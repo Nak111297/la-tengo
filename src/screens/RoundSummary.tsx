@@ -137,6 +137,7 @@ export default function RoundSummary({ teams, round, roundPoints, onNext, onEnd,
   const currentLeaderId = currentSorted[0]?.team.id;
   const leaderChanged =
     prevLeaderId !== currentLeaderId && Object.keys(roundPoints).length > 0;
+  const scoringRows = currentSorted.filter((row) => row.gained > 0);
 
   // When leader changes: start in previous order, then FLIP to current order.
   // When unchanged: start in current order directly (no flip needed).
@@ -214,6 +215,13 @@ export default function RoundSummary({ teams, round, roundPoints, onNext, onEnd,
 
       {/* Leaderboard */}
       <div className="w-full max-w-sm space-y-2">
+        {scoringRows.length > 0 && (
+          <div className="anim-slide-up mb-3 rounded-[24px] border border-qr-green/25 bg-qr-green/10 px-4 py-3 text-center">
+            <p className="text-sm font-black text-qr-green">
+              {scoringRows.map((row) => `${row.team.name} suma ${row.gained} ${row.gained === 1 ? 'punto' : 'puntos'}`).join(' · ')}
+            </p>
+          </div>
+        )}
         {displayOrder.map((row, i) => {
           // Rank indicator follows the display order (prev ranks before flip, current after)
           const rank = displayOrder.findIndex((r) => r.team.id === row.team.id);

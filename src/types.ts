@@ -66,22 +66,39 @@ export const SPEED_DURATION = 60;
 export const RANDOM_GENRE = 'Aleatorio';
 
 export const PLAYABLE_GENRES = [
-  'EDM',
   'Pop Latino',
   'Reggaetón',
-  'Rock en Español',
+  'EDM',
   'Pop Internacional',
+  'Rock en Español',
+  'R&B',
+  'Hip Hop',
+  'Indie Latino',
   '2000s Hits',
   '2010s Hits',
-  'Fiesta / Party',
-  'Hip Hop',
-  'R&B',
-  'Classic Hits',
   '90s Hits',
-  'Indie Latino',
+  'Classic Hits',
+  'Fiesta / Party',
 ] as const;
 
 export const GENRES = [...PLAYABLE_GENRES, RANDOM_GENRE] as const;
+
+export const GENRE_LABELS: Record<string, string> = {
+  'EDM': 'EDM',
+  'Pop Latino': 'Pop latino',
+  'Reggaetón': 'Reggaetón',
+  'Rock en Español': 'Rock en español',
+  'Pop Internacional': 'Pop internacional',
+  '2000s Hits': 'Hits 2000s',
+  '2010s Hits': 'Hits 2010s',
+  'Fiesta / Party': 'Fiesta / party',
+  'Hip Hop': 'Hip hop',
+  'R&B': 'R&B',
+  'Classic Hits': 'Clásicos',
+  '90s Hits': 'Hits 90s',
+  'Indie Latino': 'Indie latino',
+  'Aleatorio': 'Aleatorio',
+};
 
 export const GENRE_ICONS: Record<string, string> = {
   'EDM': '🎧',

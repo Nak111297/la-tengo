@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Team } from '../types';
-import { calculateScore, calculateSpeedScore } from '../lib/scoring';
+import { STEAL_POINTS } from '../types';
+import { calculateScore, calculateSpeedScore, getBasePoints } from '../lib/scoring';
 
 interface Props {
   teams: Team[];
@@ -25,6 +26,10 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
   const preview = isSpeed
     ? calculateSpeedScore(speedPoints ?? 0, gotArtist)
     : calculateScore(betSeconds, gotArtist, false, stealMode);
+  const basePoints = isSpeed ? (speedPoints ?? 0) : (stealMode ? STEAL_POINTS : getBasePoints(betSeconds));
+  const songPoints = basePoints;
+  const artistPoints = gotArtist ? (isSpeed ? 10 : 1) : 0;
+  const bonusPoints = 0;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
@@ -39,7 +44,7 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
       </div>
 
       <div className="w-full max-w-sm space-y-3">
-        <p className="text-center text-sm text-qr-muted">¿Qué adivinó?</p>
+        <p className="text-center text-sm text-qr-muted">Marca lo que acertaron</p>
 
         <ToggleOption
           label="🎤 Artista correcto"
@@ -50,12 +55,20 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
 
       </div>
 
-      <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Total</p>
-        <p className="font-display text-6xl font-bold text-qr-yellow" style={{ textShadow: '0 0 30px rgba(255,210,63,0.5)' }}>
-          {preview}
-        </p>
-        <p className="text-sm text-qr-muted">puntos</p>
+      <div className="w-full max-w-sm rounded-[24px] border border-white/10 bg-qr-card/70 p-4">
+        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-qr-muted">Desglose</p>
+        <div className="space-y-2 text-sm">
+          <BreakdownRow label={isSpeed ? 'Puntos por velocidad' : 'Puntos base por tiempo'} value={basePoints} muted />
+          <BreakdownRow label="Canción correcta" value={songPoints} />
+          <BreakdownRow label="Artista correcto" value={artistPoints} />
+          <BreakdownRow label="Bonus" value={bonusPoints} />
+        </div>
+        <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
+          <span className="text-xs font-bold uppercase tracking-widest text-qr-muted">Total ronda</span>
+          <span className="font-display text-5xl font-bold text-qr-yellow" style={{ textShadow: '0 0 24px rgba(255,210,63,0.45)' }}>
+            {preview}
+          </span>
+        </div>
       </div>
 
       <button
@@ -95,6 +108,17 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
   );
 }
 
+function BreakdownRow({ label, value, muted = false }: { label: string; value: number; muted?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className={muted ? 'text-qr-muted' : 'text-qr-text/85'}>{label}</span>
+      <span className={`font-black ${muted ? 'text-qr-muted' : value > 0 ? 'text-qr-green' : 'text-qr-muted'}`}>
+        {muted ? value : `+${value}`}
+      </span>
+    </div>
+  );
+}
+
 function ToggleOption({ label, sublabel, checked, onChange }: {
   label: string; sublabel: string; checked: boolean; onChange: (v: boolean) => void;
 }) {
@@ -111,7 +135,9 @@ function ToggleOption({ label, sublabel, checked, onChange }: {
         <div className="font-bold text-qr-text">{label}</div>
         <div className="text-xs text-qr-muted">{sublabel}</div>
       </div>
-      <div className={`text-2xl font-black transition ${checked ? 'text-qr-green' : 'text-white/20'}`}>
+      <div className={`flex h-8 w-8 items-center justify-center rounded-[10px] border text-xl font-black transition ${
+        checked ? 'border-qr-green bg-qr-green text-qr-bg' : 'border-white/20 text-white/25'
+      }`}>
         {checked ? '✓' : '○'}
       </div>
     </button>

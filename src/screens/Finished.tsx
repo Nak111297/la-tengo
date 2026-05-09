@@ -19,6 +19,8 @@ function seededRandom(seed: number): number {
 export default function Finished({ teams, onNewGame, onReplaySameTeams, showNewGame = true, showReplaySameTeams = false }: Props) {
   const sorted = [...teams].sort((a, b) => b.score - a.score);
   const winner = sorted[0];
+  const runnerUp = sorted[1];
+  const lead = runnerUp ? winner.score - runnerUp.score : winner.score;
 
   const particles = useMemo(() =>
     Array.from({ length: 60 }, (_, i) => ({
@@ -72,6 +74,16 @@ export default function Finished({ teams, onNewGame, onReplaySameTeams, showNewG
         >
           🎉 {winner.name} gana
         </p>
+        <div className="anim-slide-up rounded-[24px] border border-white/10 bg-qr-card/70 px-5 py-3" style={{ animationDelay: '0.48s' }}>
+          <p className="text-sm font-bold text-qr-text">
+            Puntaje final: <span className="text-qr-yellow">{winner.score}</span>
+          </p>
+          {runnerUp && (
+            <p className="mt-1 text-xs text-qr-muted">
+              Diferencia: {lead} {lead === 1 ? 'punto' : 'puntos'} sobre {runnerUp.name}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Leaderboard */}
@@ -103,15 +115,15 @@ export default function Finished({ teams, onNewGame, onReplaySameTeams, showNewG
           {showReplaySameTeams && onReplaySameTeams && (
             <button
               onClick={onReplaySameTeams}
-              className="anim-slide-up rounded-full bg-qr-green py-4 text-lg font-black text-qr-bg shadow-[0_0_28px_rgba(124,255,107,0.35)] transition active:scale-95 hover:brightness-110"
+              className="anim-slide-up rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
               style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.1}s` }}
             >
-              Volver a jugar mismos equipos
+              Volver a jugar mismos equipos →
             </button>
           )}
           <button
             onClick={onNewGame}
-            className="anim-slide-up rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
+            className="anim-slide-up rounded-full border border-white/15 py-3 text-sm font-bold text-qr-muted transition active:scale-95 hover:border-qr-cyan hover:text-qr-cyan"
             style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.18}s` }}
           >
             Nueva partida →

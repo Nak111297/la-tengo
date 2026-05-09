@@ -17,6 +17,7 @@ const EQ_DELAYS = [0, 0.15, 0.08, 0.22, 0.05];
 export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, stealTeam, onBuzzIn, onSkip, sessionCode, canBuzz = true }: Props) {
   const pct = Math.max(0, Math.min(100, (timeLeft / betSeconds) * 100));
   const ringColor = stealMode ? '#FF4D4D' : '#22D3EE';
+  const urgent = timeLeft <= 5;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
@@ -39,7 +40,7 @@ export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, 
         </div>
       )}
 
-      <div className="relative flex h-44 w-44 items-center justify-center">
+      <div className={`relative flex h-44 w-44 items-center justify-center ${urgent ? 'animate-pulse' : ''}`}>
         <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
           <circle
@@ -83,7 +84,7 @@ export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, 
         disabled={!canBuzz}
         className="w-full max-w-xs rounded-full bg-qr-primary py-6 text-2xl font-black text-qr-text shadow-[0_0_32px_rgba(255,46,136,0.55)] transition active:scale-95 hover:brightness-110 disabled:opacity-35 disabled:shadow-none disabled:hover:brightness-100"
       >
-        {canBuzz ? '¡Que Rolón!' : 'Esperando turno'}
+        {canBuzz ? 'Ya la sabemos' : 'Esperando turno'}
       </button>
 
       {sessionCode && (
@@ -106,7 +107,7 @@ export default function Playing({ currentTeam, betSeconds, timeLeft, stealMode, 
 
       <button
         onClick={onSkip}
-        className="rounded-full border border-white/15 px-8 py-3 text-sm font-bold text-qr-muted transition hover:border-qr-cyan hover:text-qr-cyan active:scale-95"
+        className="rounded-full border border-white/10 px-7 py-2.5 text-xs font-bold text-qr-muted/80 transition hover:border-qr-cyan hover:text-qr-cyan active:scale-95"
       >
         ⏭ Saltar canción
       </button>

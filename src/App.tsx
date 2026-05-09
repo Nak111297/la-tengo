@@ -138,7 +138,7 @@ export default function App() {
   return (
     <div className="relative min-h-screen text-qr-text">
       {/* Top bar */}
-      {state.phase !== 'setup' && (
+      {state.phase !== 'setup' && state.phase !== 'finished' && (
         <div className="fixed left-0 right-0 top-0 z-40 border-b border-white/8 bg-qr-bg/90 backdrop-blur-md">
           <div className="flex items-center justify-between gap-2 px-3 py-2">
             <div className="flex items-center gap-2 shrink-0">
@@ -267,7 +267,7 @@ export default function App() {
         </div>
       )}
 
-      <div className={state.phase !== 'setup' ? 'pt-11' : ''}>
+      <div className={state.phase !== 'setup' && state.phase !== 'finished' ? 'pt-11' : ''}>
         {state.phase === 'setup' && (
           <Setup onStart={(t, r, g, s, debug, mp, code) => { setDebugMode(debug); setHostTeamIndex(mp ? null : -1); startGame(t, r, g, s, debug, mp, code); }} />
         )}

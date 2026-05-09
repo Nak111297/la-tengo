@@ -49,7 +49,7 @@ export default function GuessPrompt({
             <h2 className="font-display text-3xl font-bold" style={{ color: knownScoringTeam.color }}>
               {knownScoringTeam.name}
             </h2>
-            <p className="mt-2 text-sm text-qr-muted">Este equipo presionó ¡Que Rolón!</p>
+            <p className="mt-2 text-sm text-qr-muted">Este equipo presionó Responder</p>
           </div>
 
           <div className="flex w-full max-w-sm flex-col gap-3">
@@ -163,16 +163,16 @@ export default function GuessPrompt({
           onClick={() => onGotIt()}
           className="rounded-full bg-qr-green py-5 text-xl font-black text-qr-bg shadow-[0_0_28px_rgba(124,255,107,0.4)] transition active:scale-95 hover:brightness-110"
         >
-          ✅ ¡La tengo!
+          Sí, la tengo
         </button>
 
         <p className="text-xs text-qr-muted/60">
-          El jugador que adivinó toma el teléfono para ver la respuesta
+          El jugador que respondió toma el teléfono para ver la respuesta.
         </p>
 
         <button
           onClick={onDidNotGetIt}
-          className="rounded-full border-2 border-qr-red/60 py-4 text-base font-bold text-qr-red transition hover:bg-qr-red/10 active:scale-95"
+          className="rounded-full border border-qr-red/50 py-4 text-base font-bold text-qr-red transition hover:bg-qr-red/10 active:scale-95"
         >
           ❌ No la tengo
         </button>
@@ -180,7 +180,7 @@ export default function GuessPrompt({
         {canReplay && onReplay && !stealMode && (
           <button
             onClick={onReplay}
-            className="rounded-full border border-qr-cyan/40 py-3 text-sm font-bold text-qr-cyan transition hover:border-qr-cyan hover:bg-qr-cyan/10 active:scale-95"
+            className="rounded-full border border-qr-cyan/35 py-3 text-sm font-bold text-qr-cyan transition hover:border-qr-cyan hover:bg-qr-cyan/10 active:scale-95"
           >
             ↺ Escuchar de nuevo
           </button>
