@@ -70,7 +70,7 @@ function TeamRow({ row, rank, isNewLeader, entryIdx, showLeaderBadge, setRef }: 
   return (
     <div
       ref={setRef}
-      className={`${animClass} relative flex items-center justify-between rounded-[24px] px-5 py-4 ${
+      className={`${animClass} relative flex items-center justify-between rounded-[20px] px-5 py-4 ${
         isLeader
           ? 'border border-qr-primary/50 bg-qr-card/80 shadow-[0_0_20px_rgba(255,46,136,0.15)]'
           : 'border border-white/10 bg-qr-card/60'
@@ -119,6 +119,7 @@ function TeamRow({ row, rank, isNewLeader, entryIdx, showLeaderBadge, setRef }: 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function RoundSummary({ teams, round, roundPoints, onNext, onEnd, showActions = true }: Props) {
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const rowData: RowData[] = teams.map((team) => ({
     team,
     prevScore: team.score - (roundPoints[team.id] ?? 0),
@@ -242,12 +243,29 @@ export default function RoundSummary({ teams, round, roundPoints, onNext, onEnd,
           >
             Siguiente ronda →
           </button>
-          <button
-            onClick={onEnd}
-            className="rounded-full border border-white/15 px-5 py-4 text-sm text-qr-muted transition hover:border-qr-red hover:text-qr-red"
-          >
-            Terminar
-          </button>
+          {confirmEnd ? (
+            <>
+              <button
+                onClick={onEnd}
+                className="rounded-full border border-qr-red/50 bg-qr-red/10 px-5 py-4 text-sm font-black text-qr-red transition hover:bg-qr-red/15 active:scale-95"
+              >
+                ¿Seguro?
+              </button>
+              <button
+                onClick={() => setConfirmEnd(false)}
+                className="rounded-full border border-white/15 px-5 py-4 text-sm text-qr-muted transition hover:border-white/30 hover:text-qr-text"
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setConfirmEnd(true)}
+              className="rounded-full border border-white/15 px-6 py-4 text-sm text-qr-muted transition hover:border-qr-red hover:text-qr-red"
+            >
+              Terminar
+            </button>
+          )}
         </div>
       )}
     </div>

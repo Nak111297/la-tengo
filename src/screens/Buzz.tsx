@@ -98,7 +98,7 @@ function CountdownDial({ timeLeft, total, color = '#22D3EE', label = 'seg' }: {
           className="block font-mono text-4xl font-black tabular-nums text-qr-yellow"
           style={{ textShadow: '0 0 20px rgba(255,210,63,0.5)' }}
         >
-          {timeLeft.toFixed(1)}
+          {Math.ceil(timeLeft)}
         </span>
         <span className="text-xs text-qr-muted">{label}</span>
       </div>
@@ -118,7 +118,7 @@ function GuessCountdownText({ timeLeft }: { timeLeft: number }) {
         className="font-display text-4xl font-black tabular-nums transition-colors duration-300"
         style={{ color: timerColor, textShadow: `0 0 16px ${timerColor}60` }}
       >
-        {timeLeft.toFixed(1)}
+        {Math.ceil(timeLeft)}
       </span>
       <span className="text-sm text-qr-muted">seg</span>
     </div>
@@ -159,7 +159,7 @@ function SpeedPointsMeter({ timeLeft }: { timeLeft: number }) {
         </div>
       </div>
       <p className="font-mono text-lg font-black tabular-nums text-qr-muted">
-        {timeLeft.toFixed(1)} seg
+        {Math.ceil(timeLeft)} seg
       </p>
     </div>
   );
@@ -221,7 +221,7 @@ function GenreChoiceView({ gs, room, myTeamIdx }: { gs: RemoteGameState; room: s
             key={genre}
             onClick={() => select(genre)}
             disabled={done}
-            className="flex items-center gap-2 rounded-[18px] border border-white/10 bg-qr-card/60 px-3 py-4 text-left text-sm font-bold text-qr-text transition active:scale-95 disabled:opacity-35"
+            className="flex items-center gap-2 rounded-[20px] border border-white/10 bg-qr-card/60 px-3 py-4 text-left text-sm font-bold text-qr-text transition active:scale-95 disabled:opacity-35"
           >
             <span className="text-lg">{GENRE_ICONS[genre] ?? '🎵'}</span>
             <span className="leading-tight">{genre}</span>

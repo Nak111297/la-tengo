@@ -155,7 +155,7 @@ export default function GuessPrompt({
           </div>
         )}
 
-        <p className="mt-2 text-lg text-qr-text/80">⏱ ¡Tiempo! ¿La tienen?</p>
+        <p className="mt-2 text-lg text-qr-text/80">⏱ ¡Tiempo! ¿La tenemos?</p>
       </div>
 
       <div className="flex w-full max-w-sm flex-col gap-3">

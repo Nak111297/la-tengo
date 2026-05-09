@@ -33,7 +33,7 @@ export default function DevicePicker({ onSelect }: Props) {
 
   useEffect(() => {
     const initial = window.setTimeout(refresh, 0);
-    const interval = window.setInterval(refresh, 2500);
+    const interval = window.setInterval(refresh, 4000);
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(interval);
@@ -51,7 +51,7 @@ export default function DevicePicker({ onSelect }: Props) {
         <div className="mb-4 text-5xl">🔊</div>
         <h2 className="text-2xl font-display font-bold text-qr-text">¿Dónde suena la música?</h2>
         <p className="mt-2 text-sm text-qr-muted">
-          Abrí Spotify en el dispositivo que vas a usar
+          Abrí Spotify, tocá play en cualquier canción, y aparecerá acá
         </p>
       </div>
 
@@ -61,10 +61,18 @@ export default function DevicePicker({ onSelect }: Props) {
             Buscando dispositivos...
           </div>
         ) : devices.length === 0 ? (
-          <div className="rounded-[24px] border border-white/10 bg-qr-card/80 p-6 text-center text-sm text-qr-muted">
-            No se encontraron dispositivos.<br />
-            <span className="text-qr-text/60">Abrí Spotify en tu celular o computadora.</span>
-          </div>
+          <>
+            <div className="rounded-[24px] border border-white/10 bg-qr-card/80 p-6 text-center text-sm text-qr-muted">
+              No se encontraron dispositivos.<br />
+              <span className="text-qr-text/60">Abrí Spotify en tu celular o computadora.</span>
+            </div>
+            <button
+              onClick={() => onSelect('active')}
+              className="w-full rounded-full border border-white/15 py-3 text-sm font-bold text-qr-muted transition hover:border-qr-cyan hover:text-qr-cyan active:scale-95"
+            >
+              Continuar sin seleccionar
+            </button>
+          </>
         ) : (
           devices.map(d => (
             <button

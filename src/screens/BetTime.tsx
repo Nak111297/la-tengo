@@ -35,10 +35,10 @@ export default function BetTime({ currentTeam, onBet }: Props) {
             <button
               key={opt.seconds}
               onClick={() => onBet(opt.seconds)}
-              className="group relative overflow-hidden rounded-[24px] border border-white/10 bg-qr-card/60 px-6 py-5 transition hover:border-white/20 hover:bg-qr-card active:scale-95"
+              className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-qr-card/60 px-6 py-5 transition hover:border-white/20 hover:bg-qr-card active:scale-95"
             >
               <div
-                className={`absolute left-0 top-0 h-0.5 ${meta.barWidth}`}
+                className={`absolute left-0 top-0 h-[3px] ${meta.barWidth}`}
                 style={{ background: meta.color }}
               />
               <div className="flex items-center justify-between">

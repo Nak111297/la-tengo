@@ -62,7 +62,7 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
         onClick={() => onConfirm(gotArtist, false)}
         className="w-full max-w-sm rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
       >
-        Confirmar puntos
+        Confirmar puntos →
       </button>
 
       <button

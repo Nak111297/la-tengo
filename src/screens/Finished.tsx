@@ -79,7 +79,7 @@ export default function Finished({ teams, onNewGame, onReplaySameTeams, showNewG
         {sorted.map((team, i) => (
           <div
             key={team.id}
-            className={`anim-card flex items-center justify-between rounded-[24px] px-5 py-4 ${
+            className={`anim-card flex items-center justify-between rounded-[20px] px-5 py-4 ${
               i === 0
                 ? 'border border-qr-primary/50 bg-qr-card/80 shadow-[0_0_24px_rgba(255,46,136,0.2)]'
                 : 'border border-white/10 bg-qr-card/60'
@@ -114,7 +114,7 @@ export default function Finished({ teams, onNewGame, onReplaySameTeams, showNewG
             className="anim-slide-up rounded-full bg-qr-primary py-4 text-lg font-black text-qr-text shadow-[0_0_28px_rgba(255,46,136,0.5)] transition active:scale-95 hover:brightness-110"
             style={{ animationDelay: `${0.55 + sorted.length * 0.08 + 0.18}s` }}
           >
-            Nueva partida
+            Nueva partida →
           </button>
         </div>
       )}

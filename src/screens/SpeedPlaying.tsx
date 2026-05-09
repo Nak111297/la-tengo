@@ -85,7 +85,7 @@ export default function SpeedPlaying({ currentTeam, timeLeft, onBuzzIn, onSkip, 
           <p className="text-[10px] font-bold uppercase tracking-widest text-qr-muted/50">
             Buzzers — escanear para unirse
           </p>
-          <div className="rounded-[14px] border border-white/10 bg-qr-card p-1.5">
+          <div className="rounded-[24px] border border-white/10 bg-qr-card p-1.5">
             <img
               src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(window.location.origin + '/buzz?room=' + sessionCode)}&size=96x96&color=e2e8f0&bgcolor=0f0f1a`}
               alt="QR"

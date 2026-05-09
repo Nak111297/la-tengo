@@ -24,6 +24,7 @@ export default function App() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [hostTeamIndex, setHostTeamIndex] = useState<number | null>(null);
   const [hostAnswerOverrideKey, setHostAnswerOverrideKey] = useState<string | null>(null);
+  const [showStealOverlay, setShowStealOverlay] = useState(false);
 
   const {
     state, timeLeft, canReplay, sessionCode,
@@ -59,6 +60,13 @@ export default function App() {
     await retryPlayback();
     setLoading(false);
   }, [retryPlayback]);
+
+  useEffect(() => {
+    if (!state.stealMode) return;
+    setShowStealOverlay(true);
+    const timeout = window.setTimeout(() => setShowStealOverlay(false), 1200);
+    return () => window.clearTimeout(timeout);
+  }, [state.stealMode]);
 
   const reconnectSpotify = () => {
     clearAuth();
@@ -158,7 +166,7 @@ export default function App() {
                       boxShadow: isActive ? `0 0 0 1px ${t.color}66` : undefined,
                     }}
                   >
-                    {t.score}
+                    {t.name.charAt(0).toUpperCase()} {t.score}
                   </span>
                 );
               })}
@@ -246,6 +254,15 @@ export default function App() {
           <div className="flex flex-col items-center gap-4 rounded-[28px] border border-white/10 bg-qr-card px-8 py-6 shadow-[0_12px_40px_rgba(0,0,0,0.5)]">
             <div className="h-10 w-10 rounded-full border-4 border-white/10 border-t-qr-green animate-spin" />
             <p className="text-sm font-bold text-qr-text">Iniciando Spotify...</p>
+          </div>
+        </div>
+      )}
+
+      {showStealOverlay && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-qr-red/90 backdrop-blur-sm animate-pulse">
+          <div className="flex flex-col items-center gap-4">
+            <span className="text-8xl">🔥</span>
+            <span className="font-display text-6xl font-black text-white">ROBO</span>
           </div>
         </div>
       )}

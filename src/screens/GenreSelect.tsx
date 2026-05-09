@@ -23,7 +23,7 @@ export default function GenreSelect({ currentTeam, onSelect, loading, gameMode }
 
       <p className="text-sm font-bold text-qr-muted">Elegí el género</p>
 
-      <div className="grid w-full max-w-sm grid-cols-2 gap-2">
+      <div className={`grid w-full max-w-sm grid-cols-2 gap-2 ${loading ? 'opacity-40 pointer-events-none' : ''}`}>
         {GENRES.map((genre) => (
           <button
             key={genre}

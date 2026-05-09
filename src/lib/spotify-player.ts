@@ -1052,27 +1052,28 @@ async function isTrackPlaying(token: string, trackUri: string): Promise<boolean>
   return (
     playback?.is_playing === true &&
     playback.item?.uri === trackUri &&
-    (typeof deviceId !== 'string' || playback.device?.id === deviceId)
+    (typeof deviceId !== 'string' || deviceId === 'active' || playback.device?.id === deviceId)
   );
 }
 
 export async function playSong(trackUri: string, startMs = 0): Promise<boolean> {
   const token = await getToken();
   if (!token || deviceId === undefined) return false;
+  const explicitDeviceId = deviceId && deviceId !== 'active' ? deviceId : null;
 
   const doPlay = () =>
-    fetch(`https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''}`, {
+    fetch(`https://api.spotify.com/v1/me/player/play${explicitDeviceId ? `?device_id=${encodeURIComponent(explicitDeviceId)}` : ''}`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ uris: [trackUri], position_ms: startMs }),
     }).catch(() => null);
 
   const transferPlayback = () =>
-    deviceId
+    explicitDeviceId
       ? fetch('https://api.spotify.com/v1/me/player', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device_ids: [deviceId], play: false }),
+      body: JSON.stringify({ device_ids: [explicitDeviceId], play: false }),
       }).catch(() => null)
       : Promise.resolve(null);
 
@@ -1089,7 +1090,7 @@ export async function playSong(trackUri: string, startMs = 0): Promise<boolean> 
 
   // One final plain resume covers the case where Spotify loaded the URI but
   // left playback paused after device transfer.
-  await fetch(`https://api.spotify.com/v1/me/player/play${deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''}`, {
+  await fetch(`https://api.spotify.com/v1/me/player/play${explicitDeviceId ? `?device_id=${encodeURIComponent(explicitDeviceId)}` : ''}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
   }).catch(() => null);
@@ -1097,11 +1098,11 @@ export async function playSong(trackUri: string, startMs = 0): Promise<boolean> 
   if (await isTrackPlaying(token, trackUri)) return true;
 
   const playback = await getPlaybackState(token);
-  if (deviceId && playback?.device?.id !== deviceId) {
+  if (explicitDeviceId && playback?.device?.id !== explicitDeviceId) {
     await fetch('https://api.spotify.com/v1/me/player', {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device_ids: [deviceId], play: false }),
+      body: JSON.stringify({ device_ids: [explicitDeviceId], play: false }),
     }).catch(() => {});
   }
   return false;
@@ -1110,7 +1111,8 @@ export async function playSong(trackUri: string, startMs = 0): Promise<boolean> 
 export async function pauseSong(): Promise<void> {
   const token = await getToken();
   if (!token || deviceId === undefined) return;
-  await fetch(`https://api.spotify.com/v1/me/player/pause${deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''}`, {
+  const explicitDeviceId = deviceId && deviceId !== 'active' ? deviceId : null;
+  await fetch(`https://api.spotify.com/v1/me/player/pause${explicitDeviceId ? `?device_id=${encodeURIComponent(explicitDeviceId)}` : ''}`, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token}` },
   });

@@ -115,7 +115,7 @@ export default function Setup({ onStart }: Props) {
             <button
               key={n}
               onClick={() => setMaxRounds(n)}
-              className={`flex-1 rounded-[16px] py-3 text-sm font-bold transition ${
+              className={`flex-1 rounded-[20px] py-3 text-sm font-bold transition ${
                 maxRounds === n
                   ? 'bg-qr-primary text-qr-text shadow-[0_0_20px_rgba(255,46,136,0.4)]'
                   : 'border border-white/10 bg-qr-card/60 text-qr-muted hover:border-white/20'
@@ -146,7 +146,7 @@ export default function Setup({ onStart }: Props) {
                   <button
                     key={src}
                     onClick={() => setSongSource(src)}
-                    className={`flex flex-col items-center gap-1 rounded-[16px] border p-3 transition ${
+                    className={`flex flex-col items-center gap-1 rounded-[20px] border p-3 transition ${
                       songSource === src
                         ? 'border-qr-primary/50 bg-qr-primary/10 text-qr-text'
                         : 'border-white/10 bg-qr-card text-qr-muted hover:border-white/20'
@@ -166,7 +166,7 @@ export default function Setup({ onStart }: Props) {
               <p className="mb-2 text-xs font-bold uppercase tracking-widest text-qr-muted">Multidispositivo</p>
               <button
                 onClick={toggleMultiphone}
-                className={`flex w-full items-center justify-between rounded-[16px] border p-3 transition ${
+                className={`flex w-full items-center justify-between rounded-[20px] border p-3 transition ${
                   multiphone ? 'border-qr-cyan/40 bg-qr-cyan/10' : 'border-white/10 bg-qr-card hover:border-white/20'
                 }`}
               >
@@ -216,7 +216,7 @@ export default function Setup({ onStart }: Props) {
               <p className="mb-2 text-xs font-bold uppercase tracking-widest text-qr-muted">Desarrollo</p>
               <button
                 onClick={() => setDebugMode(!debugMode)}
-                className={`flex w-full items-center justify-between rounded-[16px] border p-3 transition ${
+                className={`flex w-full items-center justify-between rounded-[20px] border p-3 transition ${
                   debugMode ? 'border-qr-yellow/40 bg-qr-yellow/10' : 'border-white/10 bg-qr-card hover:border-white/20'
                 }`}
               >
