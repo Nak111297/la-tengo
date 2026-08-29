@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import type { GameState, Team, TrackInfo, GameMode, SongSource } from '../types';
 import { PLAYABLE_GENRES, RANDOM_GENRE, TEAM_COLORS, SPEED_DURATION } from '../types';
 import { calculateScore, calculateSpeedScore } from './scoring';
-import { loadTracksForGenre, playSong, pauseSong } from './spotify-player';
+import { loadTracksForGenre, playSong, pauseSong, buildPlayedFilter } from './spotify-player';
 import {
   generateRoomCode,
   createSession,
@@ -67,7 +67,7 @@ export function useGame() {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const tracksRef = useRef<TrackInfo[]>([]);
   const trackIndexRef = useRef(0);
-  const playedUrisRef = useRef<Set<string>>(new Set());
+  const playedTracksRef = useRef<Map<string, TrackInfo>>(new Map());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const gameModeRef = useRef<GameMode>('knowledge');
@@ -178,21 +178,25 @@ export function useGame() {
 
       if (debugModeRef.current) {
         await new Promise(r => setTimeout(r, 350));
-        const fresh = DEBUG_TRACKS.filter(t => !playedUrisRef.current.has(t.uri));
+        const fresh = DEBUG_TRACKS.filter(t => !playedTracksRef.current.has(t.uri));
         const pool = fresh.length > 0 ? fresh : DEBUG_TRACKS;
         tracks = [pool[Math.floor(Math.random() * pool.length)]];
       } else {
-        tracks = await loadTracksForGenre(selectedGenre, songSourceRef.current);
+        const played = buildPlayedFilter(playedTracksRef.current.values());
+        tracks = await loadTracksForGenre(selectedGenre, songSourceRef.current, played);
         if (tracks.length === 0) return 'No se encontraron canciones para ese género.';
       }
 
-      const fresh = tracks.filter(t => !playedUrisRef.current.has(t.uri));
+      const fresh = tracks.filter(t => !playedTracksRef.current.has(t.uri));
       const pool = fresh.length > 0 ? fresh : tracks;
       tracksRef.current = pool;
       trackIndexRef.current = 0;
 
+      // Se marca al elegirla, no al reproducirla: si el equipo vuelve al menú
+      // de géneros, la siguiente ronda arranca con otra canción.
+      playedTracksRef.current.set(pool[0].uri, pool[0]);
+
       if (gameModeRef.current === 'speed') {
-        playedUrisRef.current.add(pool[0].uri);
         update({
           phase: 'playing',
           betSeconds: SPEED_DURATION,
@@ -233,7 +237,7 @@ export function useGame() {
       update({ betSeconds: null, phase: 'bet-time', playbackError: PLAYBACK_ERROR });
       return PLAYBACK_ERROR;
     }
-    playedUrisRef.current.add(track.uri);
+    playedTracksRef.current.set(track.uri, track);
     startCountdown(seconds, async () => {
       if (!debugModeRef.current) await pauseSong();
       clearTimers();
@@ -541,7 +545,7 @@ export function useGame() {
 
   const replaySameTeams = useCallback(() => {
     clearTimers();
-    playedUrisRef.current.clear();
+    playedTracksRef.current.clear();
     tracksRef.current = [];
     trackIndexRef.current = 0;
     betSecondsRef.current = 30;
@@ -574,7 +578,7 @@ export function useGame() {
 
   const resetGame = useCallback(() => {
     clearTimers();
-    playedUrisRef.current.clear();
+    playedTracksRef.current.clear();
     gameModeRef.current = 'knowledge';
     songSourceRef.current = 'advanced';
     debugModeRef.current = false;
