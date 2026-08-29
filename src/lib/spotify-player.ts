@@ -4,6 +4,15 @@ import { EXTRA_GENRE_SONGS_LATIN } from './genre-songs-extra-latin';
 import { EXTRA_GENRE_SONGS_PARTY } from './genre-songs-extra-party';
 import { EXTRA_GENRE_SONGS_POP } from './genre-songs-extra-pop';
 import type { TrackInfo } from '../types';
+import {
+  artistToken,
+  isPlayed,
+  markPlayedArtist,
+  preferUnplayed,
+  songToken,
+  unplayedOrReset,
+  uriToken,
+} from './play-history';
 
 type SelectedDeviceId = string | null;
 
@@ -785,41 +794,6 @@ function withGenreStart(track: TrackInfo, genre: string): TrackInfo {
   return { ...track, startMs: getGenreStartMs(genre) };
 }
 
-// ---------------------------------------------------------------------------
-// Historial de la partida — lo que acaba de sonar no vuelve a salir
-// ---------------------------------------------------------------------------
-
-export interface PlayedFilter {
-  uris: ReadonlySet<string>;
-  songKeys: ReadonlySet<string>;
-  artists: ReadonlySet<string>;
-}
-
-const NOTHING_PLAYED: PlayedFilter = { uris: new Set(), songKeys: new Set(), artists: new Set() };
-
-function songKey(artist: string, name: string): string {
-  return `${normalizeSearchText(artist).trim()}::${normalizeSearchText(name).trim()}`;
-}
-
-export function buildPlayedFilter(tracks: Iterable<TrackInfo>): PlayedFilter {
-  const uris = new Set<string>();
-  const songKeys = new Set<string>();
-  const artists = new Set<string>();
-  for (const track of tracks) {
-    uris.add(track.uri);
-    songKeys.add(songKey(track.artist, track.name));
-    artists.add(normalizeSearchText(track.artist).trim());
-  }
-  return { uris, songKeys, artists };
-}
-
-// Descarta lo ya usado, pero si TODO se usó devuelve la lista completa: es
-// preferible repetir una canción a quedarse sin ronda.
-function preferUnused<T>(items: readonly T[], isUsed: (item: T) => boolean): T[] {
-  const unused = items.filter(item => !isUsed(item));
-  return unused.length > 0 ? unused : [...items];
-}
-
 async function findTrackAdvanced(song: SongEntry, token: string): Promise<{ result: TrackInfo | null; error: string | null }> {
   const cached = getCached(song.artist, song.name);
   if (cached) return { result: cached, error: null };
@@ -843,12 +817,11 @@ async function findTrackAdvanced(song: SongEntry, token: string): Promise<{ resu
 async function findTrackByGenreKeyword(
   genre: string,
   token: string,
-  played: PlayedFilter,
 ): Promise<{ result: TrackInfo | null; error: string | null }> {
   const { items, error } = await spotifySearch(genre, token);
   if (error) return { result: null, error };
   if (items.length === 0) return { result: null, error: 'no-items' };
-  const pool = preferUnused(items, t => played.uris.has(t.uri));
+  const pool = unplayedOrReset(genre, items, t => [uriToken(t.uri)]);
   const pick = pool[Math.floor(Math.random() * pool.length)];
   return { result: trackInfoFrom(pick), error: null };
 }
@@ -863,7 +836,7 @@ function normalizeSearchText(value: string): string {
 async function findTrackByArtist(
   artist: string,
   token: string,
-  played: PlayedFilter,
+  genre: string,
 ): Promise<{ result: TrackInfo | null; error: string | null }> {
   const { items, error } = await spotifySearch(`artist:"${artist}"`, token);
   if (error) return { result: null, error };
@@ -876,7 +849,7 @@ async function findTrackByArtist(
   );
   const pool = (valid.length > 0 ? valid : items).slice(0, 10);
   if (pool.length === 0) return { result: null, error: 'no-items' };
-  const fresh = preferUnused(pool, t => played.uris.has(t.uri));
+  const fresh = preferUnplayed(genre, pool, t => [uriToken(t.uri)]);
   const pick = fresh[Math.floor(Math.random() * fresh.length)];
   return { result: trackInfoFrom(pick), error: null };
 }
@@ -884,17 +857,21 @@ async function findTrackByArtist(
 async function findTrackByGenreArtist(
   genre: string,
   token: string,
-  played: PlayedFilter,
 ): Promise<{ result: TrackInfo | null; error: string | null }> {
   const artists = GENRE_ARTISTS[genre];
   if (!artists) return { result: null, error: 'no-artist-genre' };
 
-  // La lista de artistas es corta, así que primero se rota entre los que aún
-  // no salieron; dentro de cada artista se descartan los temas ya jugados.
-  const candidates = preferUnused(artists, a => played.artists.has(normalizeSearchText(a).trim()));
+  // Acá el catálogo del género ES la lista de artistas: se rota entre los que
+  // aún no salieron y recién al agotarlos se reinicia.
+  const candidates = unplayedOrReset(genre, artists, a => [artistToken(a)]);
   for (const artist of shuffleArray(candidates).slice(0, 5)) {
-    const { result, error } = await findTrackByArtist(artist, token, played);
-    if (result) return { result, error: null };
+    const { result, error } = await findTrackByArtist(artist, token, genre);
+    if (result) {
+      // Se marca el nombre del catálogo, no el que devolvió Spotify: es el que
+      // se compara al rotar, y así la rotación sí llega a agotarse.
+      markPlayedArtist(genre, artist);
+      return { result, error: null };
+    }
     if (error === 'http-429') return { result: null, error };
   }
 
@@ -905,7 +882,7 @@ async function findTrackByGenreArtist(
 async function findTrackFromPlaylist(
   playlistId: string,
   token: string,
-  played: PlayedFilter,
+  genre: string,
 ): Promise<{ result: TrackInfo | null; error: string | null }> {
   try {
     const url =
@@ -926,7 +903,7 @@ async function findTrackFromPlaylist(
         !!t && !t.is_local && typeof t.uri === 'string' && t.uri.startsWith('spotify:track:'),
       );
     if (valid.length === 0) return { result: null, error: 'no-items' };
-    const pool = preferUnused(valid, t => played.uris.has(t.uri));
+    const pool = unplayedOrReset(genre, valid, t => [uriToken(t.uri)]);
     const pick = pool[Math.floor(Math.random() * pool.length)];
     return { result: trackInfoFrom(pick), error: null };
   } catch (e) {
@@ -937,14 +914,13 @@ async function findTrackFromPlaylist(
 export async function loadTracksForGenre(
   genre: string,
   songSource: 'random' | 'advanced' = 'advanced',
-  played: PlayedFilter = NOTHING_PLAYED,
 ): Promise<TrackInfo[]> {
   const token = await getToken();
   if (!token) throw new Error('No Spotify token');
 
   const rateLimitMsg = 'Límite de Spotify alcanzado. Espera unos segundos e intenta de nuevo.';
   if (GENRE_ARTISTS[genre]) {
-    const { result, error } = await findTrackByGenreArtist(genre, token, played);
+    const { result, error } = await findTrackByGenreArtist(genre, token);
     if (result) return [withGenreStart(result, genre)];
     throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones para ${genre} (${error})`);
   }
@@ -953,12 +929,12 @@ export async function loadTracksForGenre(
     // Use the curated playlist for this genre if one is configured
     const playlistId = GENRE_PLAYLISTS[genre];
     if (playlistId) {
-      const { result, error } = await findTrackFromPlaylist(playlistId, token, played);
+      const { result, error } = await findTrackFromPlaylist(playlistId, token, genre);
       if (result) return [withGenreStart(result, genre)];
       throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones en el playlist de ${genre} (${error})`);
     }
     // Fallback for genres without a playlist: keyword search
-    const { result, error } = await findTrackByGenreKeyword(genre, token, played);
+    const { result, error } = await findTrackByGenreKeyword(genre, token);
     if (result) return [withGenreStart(result, genre)];
     throw new Error(error === 'http-429' ? rateLimitMsg : `No se encontraron canciones para ${genre} (${error})`);
   }
@@ -969,7 +945,7 @@ export async function loadTracksForGenre(
   const songs = GENRE_SONGS[genre];
   if (!songs) throw new Error(`Género no configurado: ${genre}`);
 
-  const candidates = preferUnused(songs, song => played.songKeys.has(songKey(song.artist, song.name)));
+  const candidates = unplayedOrReset(genre, songs, song => [songToken(song.artist, song.name)]);
   // Dos canciones distintas del catálogo pueden resolver al mismo URI en
   // Spotify; si eso pasa se guarda como último recurso y se sigue buscando.
   let repeated: TrackInfo | null = null;
@@ -978,7 +954,7 @@ export async function loadTracksForGenre(
     const { result, error } = await findTrackAdvanced(song, token);
     if (error === 'http-429') throw new Error(rateLimitMsg);
     if (!result) continue; // 'no-items' or other error → try next song
-    if (!played.uris.has(result.uri)) return [withGenreStart(result, genre)];
+    if (!isPlayed(genre, uriToken(result.uri))) return [withGenreStart(result, genre)];
     repeated ??= result;
   }
 
