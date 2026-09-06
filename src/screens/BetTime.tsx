@@ -1,77 +1,90 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { BET_OPTIONS } from '../types';
 import type { Team } from '../types';
 
 interface Props {
   currentTeam: Team;
-  onBet: (seconds: number) => void;
+  onBet: (seconds: number) => void | Promise<void>;
 }
-
-const BET_META: Record<number, { risk: string; color: string; barWidth: string }> = {
-  3:  { risk: 'Máximo riesgo', color: '#FF4D4D', barWidth: 'w-full' },
-  5:  { risk: 'Arriesgado',   color: '#FF2E88', barWidth: 'w-3/4' },
-  10: { risk: 'Cauteloso',    color: '#FFD23F', barWidth: 'w-1/2' },
-  30: { risk: 'Sin riesgo',   color: '#7CFF6B', barWidth: 'w-1/4' },
+const BET_META: Record<number, { risk: string; color: string }> = {
+  3: { risk: 'Para los que se la saben', color: '#faa6bf' },
+  5: { risk: 'Un poco de instinto', color: '#b6a4ff' },
+  10: { risk: 'Dale una vuelta', color: '#f6dd79' },
+  30: { risk: 'Escuchá con calma', color: '#83d8b8' },
 };
 
 export default function BetTime({ currentTeam, onBet }: Props) {
   const [selectedSeconds, setSelectedSeconds] = useState<number | null>(null);
-
-  const chooseBet = (seconds: number) => {
-    setSelectedSeconds(seconds);
-    onBet(seconds);
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
+  const start = async () => {
+    if (selectedSeconds === null || startingRef.current) return;
+    startingRef.current = true;
+    setStarting(true);
+    try {
+      await onBet(selectedSeconds);
+    } finally {
+      startingRef.current = false;
+      setStarting(false);
+    }
   };
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
-      <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Turno de</p>
-        <h2 className="mt-1 font-display text-3xl font-bold" style={{ color: currentTeam.color }}>
-          {currentTeam.name}
-        </h2>
+    <main className="bet-page">
+      <div className="turn-label">
+        <span style={{ background: currentTeam.color }} />
+        <span>
+          Turno de <strong>{currentTeam.name}</strong>
+        </span>
       </div>
-
-      <div className="text-center">
-        <p className="text-xl font-black text-qr-text">¿Cuánto tiempo apuestas?</p>
-        <p className="mt-1 text-sm text-qr-muted">Elige cuánto tiempo escucharán antes de responder.</p>
+      <div className="page-intro">
+        <p className="eyebrow">CONFIÁ EN TU OÍDO</p>
+        <h1>¿En cuántos segundos?</h1>
+        <p>Menos tiempo para escuchar. Más puntos por acertar.</p>
       </div>
-
-      <div className="flex w-full max-w-sm flex-col gap-3">
-        {BET_OPTIONS.map((opt) => {
-          const meta = BET_META[opt.seconds];
-          return (
-            <button
-              key={opt.seconds}
-              onClick={() => chooseBet(opt.seconds)}
-              className={`group relative overflow-hidden rounded-[28px] border px-6 py-5 transition hover:border-white/20 hover:bg-qr-card active:scale-95 ${
-                selectedSeconds === opt.seconds
-                  ? 'bg-qr-card shadow-[0_0_22px_rgba(255,255,255,0.08)]'
-                  : 'border-white/10 bg-qr-card/60'
-              }`}
-              style={selectedSeconds === opt.seconds ? { borderColor: currentTeam.color, background: `${currentTeam.color}18` } : undefined}
-            >
-              <div
-                className={`absolute left-0 top-0 h-[3px] ${meta.barWidth}`}
-                style={{ background: meta.color }}
-              />
-              <div className="flex items-center justify-between">
-                <div className="text-left">
-                  <span className="block text-2xl font-black text-qr-text">{opt.label} → {opt.points} pts</span>
-                  <span className="text-xs font-bold" style={{ color: meta.color }}>{meta.risk}</span>
-                </div>
-                <span
-                  className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm font-black ${
-                    selectedSeconds === opt.seconds ? 'text-qr-bg' : 'text-white/30'
-                  }`}
-                  style={selectedSeconds === opt.seconds ? { background: currentTeam.color, borderColor: currentTeam.color } : { borderColor: 'rgba(255,255,255,0.18)' }}
-                >
-                  {selectedSeconds === opt.seconds ? '✓' : ''}
-                </span>
-              </div>
-            </button>
-          );
-        })}
+      <div className="bet-grid">
+        {BET_OPTIONS.map((opt) => (
+          <button
+            key={opt.seconds}
+            onClick={() => setSelectedSeconds(opt.seconds)}
+            disabled={starting}
+            aria-pressed={selectedSeconds === opt.seconds}
+            className={`bet-card ${selectedSeconds === opt.seconds ? 'is-selected' : ''}`}
+          >
+            <span className="bet-card-top">
+              <span style={{ color: BET_META[opt.seconds].color }}>
+                {BET_META[opt.seconds].risk}
+              </span>
+              <span className="selection-check" aria-hidden="true">
+                {selectedSeconds === opt.seconds ? '✓' : ''}
+              </span>
+            </span>
+            <span className="bet-duration">
+              {opt.seconds}
+              <small>seg</small>
+            </span>
+            <span className="bet-points">
+              <strong>{opt.points}</strong> puntos base
+            </span>
+          </button>
+        ))}
       </div>
-    </div>
+      <p className="bet-bonus">
+        Acertá la canción para ganar los puntos base. +1 si también sabés el
+        artista.
+      </p>
+      <button
+        className="primary-button bet-start"
+        onClick={start}
+        disabled={selectedSeconds === null || starting}
+      >
+        {starting
+          ? 'Iniciando…'
+          : selectedSeconds === null
+            ? 'Elegí el tiempo para continuar'
+            : `Escuchar ${selectedSeconds} segundos`}
+        <span aria-hidden="true">▶</span>
+      </button>
+      <p className="start-hint">La música empieza cuando presionás escuchar.</p>
+    </main>
   );
 }

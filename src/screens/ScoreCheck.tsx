@@ -27,9 +27,7 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
     ? calculateSpeedScore(speedPoints ?? 0, gotArtist)
     : calculateScore(betSeconds, gotArtist, false, stealMode);
   const basePoints = isSpeed ? (speedPoints ?? 0) : (stealMode ? STEAL_POINTS : getBasePoints(betSeconds));
-  const songPoints = basePoints;
   const artistPoints = gotArtist ? (isSpeed ? 10 : 1) : 0;
-  const bonusPoints = 0;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
@@ -58,10 +56,8 @@ export default function ScoreCheck({ teams, currentTeam, stealMode, stealTeam, b
       <div className="w-full max-w-sm rounded-[24px] border border-white/10 bg-qr-card/70 p-4">
         <p className="mb-3 text-xs font-bold uppercase tracking-widest text-qr-muted">Desglose</p>
         <div className="space-y-2 text-sm">
-          <BreakdownRow label={isSpeed ? 'Puntos por velocidad' : 'Puntos base por tiempo'} value={basePoints} muted />
-          <BreakdownRow label="Canción correcta" value={songPoints} />
+          <BreakdownRow label={isSpeed ? 'Canción correcta · velocidad' : 'Canción correcta · puntos base'} value={basePoints} />
           <BreakdownRow label="Artista correcto" value={artistPoints} />
-          <BreakdownRow label="Bonus" value={bonusPoints} />
         </div>
         <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
           <span className="text-xs font-bold uppercase tracking-widest text-qr-muted">Total ronda</span>
@@ -125,6 +121,7 @@ function ToggleOption({ label, sublabel, checked, onChange }: {
   return (
     <button
       onClick={() => onChange(!checked)}
+      aria-pressed={checked}
       className={`flex w-full items-center justify-between rounded-[20px] border px-5 py-4 transition active:scale-95 ${
         checked
           ? 'border-qr-green/50 bg-qr-green/10'

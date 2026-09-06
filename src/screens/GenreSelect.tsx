@@ -1,4 +1,5 @@
-import { GENRES, GENRE_ICONS, GENRE_LABELS } from '../types';
+import type { CSSProperties } from 'react';
+import { GENRES, GENRE_ICONS, GENRE_LABELS, RANDOM_GENRE } from '../types';
 import type { Team } from '../types';
 
 interface Props {
@@ -7,48 +8,76 @@ interface Props {
   loading: boolean;
   gameMode?: 'knowledge' | 'speed';
 }
+const ACCENTS = [
+  '#faa6bf',
+  '#ffbc85',
+  '#b6a4ff',
+  '#f6dd79',
+  '#83d8b8',
+  '#a5bbfa',
+];
 
-export default function GenreSelect({ currentTeam, onSelect, loading, gameMode }: Props) {
+export default function GenreSelect({
+  currentTeam,
+  onSelect,
+  loading,
+  gameMode,
+}: Props) {
   return (
-    <div className="flex min-h-screen flex-col items-center gap-6 px-4 pt-16 pb-8">
-      <div
-        className="w-full max-w-sm rounded-[24px] border px-5 py-4 text-center"
-        style={{ borderColor: `${currentTeam.color}55`, background: `${currentTeam.color}14` }}
-      >
-        <p className="text-xs font-bold uppercase tracking-widest text-qr-muted">Turno de</p>
-        <h2 className="mt-1 font-display text-3xl font-bold" style={{ color: currentTeam.color }}>
-          {currentTeam.name}
-        </h2>
-        {gameMode === 'speed' && (
-          <p className="mt-1 text-xs font-bold text-qr-yellow">⚡ Modo Velocidad · la canción empieza al instante</p>
-        )}
+    <main className="genre-page" aria-busy={loading}>
+      <div className="turn-label">
+        <span style={{ background: currentTeam.color }} />
+        <span>
+          Turno de <strong>{currentTeam.name}</strong>
+        </span>
       </div>
-
-      <p className="text-sm font-bold text-qr-muted">Elige el género</p>
-
-      <div className={`grid w-full max-w-sm grid-cols-2 gap-2 ${loading ? 'opacity-40 pointer-events-none' : ''}`}>
-        {GENRES.map((genre) => (
+      <div className="genre-heading">
+        <div>
+          <p className="eyebrow">QUE SUENE LO TUYO</p>
+          <h1>¿Qué vamos a escuchar?</h1>
+          <p>
+            {gameMode === 'speed'
+              ? 'Elegí un género. La canción empieza al instante: todos pueden responder.'
+              : 'Elegí un género y después apostá cuántos segundos necesitás.'}
+          </p>
+        </div>
+        <span className="genre-count">{GENRES.length - 1} géneros + azar</span>
+      </div>
+      <div className="genre-grid">
+        {GENRES.map((genre, index) => (
           <button
             key={genre}
             onClick={() => onSelect(genre)}
             disabled={loading}
-            className="flex min-h-[68px] items-center gap-2 rounded-[20px] border border-white/10 bg-qr-card/70 px-4 py-3 text-sm font-bold text-qr-text transition hover:border-qr-primary/50 hover:bg-qr-card active:scale-95 disabled:opacity-40 text-left"
+            className={`genre-card ${genre === RANDOM_GENRE ? 'genre-random' : ''}`}
+            style={
+              {
+                '--genre-accent': ACCENTS[index % ACCENTS.length],
+              } as CSSProperties
+            }
           >
-            <span className="text-xl">{GENRE_ICONS[genre] ?? '🎵'}</span>
-            <span className="leading-tight">{GENRE_LABELS[genre] ?? genre}</span>
+            <span className="genre-card-top">
+              <span className="genre-icon" aria-hidden="true">
+                {GENRE_ICONS[genre] ?? '🎵'}
+              </span>
+              <span className="genre-arrow" aria-hidden="true">
+                ↗
+              </span>
+            </span>
+            <strong>{GENRE_LABELS[genre] ?? genre}</strong>
+            <span className="genre-subtitle">
+              {genre === RANDOM_GENRE
+                ? 'Dejá que la suerte elija'
+                : 'Dale play al reto'}
+            </span>
           </button>
         ))}
       </div>
-
       {loading && (
-        <div className="flex items-center gap-2 text-sm text-qr-primary">
-          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25" />
-            <path fill="currentColor" className="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <span className="animate-pulse">Cargando canción...</span>
-        </div>
+        <p role="status" className="text-center text-qr-primary mt-6">
+          Buscando tu próxima canción…
+        </p>
       )}
-    </div>
+    </main>
   );
 }

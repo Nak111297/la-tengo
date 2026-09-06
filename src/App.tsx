@@ -3,6 +3,8 @@ import { handleAuthCallback, isAuthenticated, clearAuth, redirectToSpotifyAuth }
 import { selectDevice } from './lib/spotify-player';
 import { useGame } from './lib/useGame';
 import Login from './screens/Login';
+import Brand from './components/Brand';
+import StealAnnouncement from './components/StealAnnouncement';
 import DevicePicker from './screens/DevicePicker';
 import Setup from './screens/Setup';
 import GenreSelect from './screens/GenreSelect';
@@ -24,7 +26,6 @@ export default function App() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [hostTeamIndex, setHostTeamIndex] = useState<number | null>(null);
   const [hostAnswerOverrideKey, setHostAnswerOverrideKey] = useState<string | null>(null);
-  const [showStealOverlay, setShowStealOverlay] = useState(false);
 
   const {
     state, timeLeft, canReplay, sessionCode,
@@ -60,13 +61,6 @@ export default function App() {
     await retryPlayback();
     setLoading(false);
   }, [retryPlayback]);
-
-  useEffect(() => {
-    if (!state.stealMode) return;
-    setShowStealOverlay(true);
-    const timeout = window.setTimeout(() => setShowStealOverlay(false), 1200);
-    return () => window.clearTimeout(timeout);
-  }, [state.stealMode]);
 
   const reconnectSpotify = () => {
     clearAuth();
@@ -140,9 +134,9 @@ export default function App() {
       {/* Top bar */}
       {state.phase !== 'setup' && state.phase !== 'finished' && (
         <div className="fixed left-0 right-0 top-0 z-40 border-b border-white/8 bg-qr-bg/90 backdrop-blur-md">
-          <div className="flex items-center justify-between gap-2 px-3 py-2">
+          <div className="game-topbar">
             <div className="flex items-center gap-2 shrink-0">
-              <img src="/logorolon2.png" alt="Que Rolón" className="h-12 w-auto" />
+              <Brand />
               {isSpeed && (
                 <span className="rounded-full bg-qr-yellow/20 px-2 py-0.5 text-[10px] font-bold text-qr-yellow">⚡</span>
               )}
@@ -150,7 +144,7 @@ export default function App() {
                 <span className="rounded-full bg-qr-yellow/20 px-2 py-0.5 text-[10px] font-bold text-qr-yellow">🛠 DEBUG</span>
               )}
               <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-bold text-qr-muted">
-                {state.round}/{state.maxRounds}
+                Ronda {state.round}/{state.maxRounds}
               </span>
             </div>
             <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
@@ -166,7 +160,7 @@ export default function App() {
                       boxShadow: isActive ? `0 0 0 1px ${t.color}66` : undefined,
                     }}
                   >
-                    {t.name.charAt(0).toUpperCase()} {t.score}
+                    <span className="score-team-name">{t.name}</span> {t.score}
                   </span>
                 );
               })}
@@ -174,14 +168,16 @@ export default function App() {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => setConfirmReset(true)}
-                className="text-qr-muted/60 hover:text-qr-red transition px-1 text-sm"
+                aria-label="Reiniciar partida"
+                className="icon-button text-qr-muted hover:text-qr-red"
               >
                 ✕
               </button>
               {!debugMode && (
                 <button
                   onClick={reconnectSpotify}
-                  className="text-qr-muted/60 hover:text-qr-green transition px-1 text-sm"
+                  aria-label="Reconectar Spotify"
+                  className="icon-button text-qr-muted hover:text-qr-green"
                   title="Reconectar Spotify"
                 >
                   ↺
@@ -258,16 +254,9 @@ export default function App() {
         </div>
       )}
 
-      {showStealOverlay && (
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-qr-red/90 backdrop-blur-sm animate-pulse">
-          <div className="flex flex-col items-center gap-4">
-            <span className="text-8xl">🔥</span>
-            <span className="font-display text-6xl font-black text-white">ROBO</span>
-          </div>
-        </div>
-      )}
+      {state.stealMode && <StealAnnouncement />}
 
-      <div className={state.phase !== 'setup' && state.phase !== 'finished' ? 'pt-11' : ''}>
+      <div className={state.phase !== 'setup' && state.phase !== 'finished' ? 'game-content' : ''}>
         {state.phase === 'setup' && (
           <Setup onStart={(t, r, g, s, debug, mp, code) => { setDebugMode(debug); setHostTeamIndex(mp ? null : -1); startGame(t, r, g, s, debug, mp, code); }} />
         )}
